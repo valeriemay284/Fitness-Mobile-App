@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Montserrat: require("../assets/fonts/Montserrat-Bold.ttf"),
+    Poppins: require("../assets/fonts/Poppins-Regular.ttf"),
   });
 
   // keep splash until fonts load

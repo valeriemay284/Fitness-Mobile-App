@@ -80,7 +80,7 @@ export default function LoginScreen() {
               </Pressable>
 
               {/* Login button */}
-              <Pressable onPress={onLogin} disabled={!isValid} style={({ pressed }) => [styles.loginBtn, !isValid && styles.loginBtnDisabled, pressed && { transform: [{ scale: 0.995 }] } ]}>
+              <Pressable onPress={onLogin} style={({ pressed }) => [styles.loginBtn, pressed && { transform: [{ scale: 0.995 }] } ]}>
                 <Text style={styles.loginText}>Login</Text>
               </Pressable>
 
@@ -115,10 +115,11 @@ const styles = StyleSheet.create({
   topBgContainer: { flex: 1, backgroundColor: colors.primaryDark },
 
   welcome: {
-    fontSize: 40,
+    fontFamily: 'Poppins',
+    fontSize: 30,
     fontWeight: '600',
     color: '#FFFFFF', 
-    marginBottom: 8,
+    marginBottom: -10,
     textAlign: 'center',
   },
 
@@ -129,15 +130,15 @@ const styles = StyleSheet.create({
     height: 220,
   },
   panda: {
-    width: 160,
-    height: 160,
+    width: 170,
+    height: 170,
     alignSelf: 'center',
     marginBottom: -40, // overlaps the next section slightly
   },
 
   // Bottom sheet card fills the rest; rounded TOP corners
   card: {
-    flexGrow: 1,
+    flexGrow: 2,
     backgroundColor: colors.cardBg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
