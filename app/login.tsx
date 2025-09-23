@@ -9,15 +9,29 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const isValid = email.trim().length > 0 && password.length >= 6;
 
+  const onLogin = async() => {
+    try {
+    const response = await fetch("http://:8080/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const onLogin = () => {
-    console.log('Login pressed', { email, password });
+    const data = await response.json();
+    console.log("Backend response:", data);
+  } catch (err) {
+    console.error("Login error:", err);
+  }
+};
+
+  const onForgot = () => {
+    console.log('Forgot Password');
+  };
+  
+  const onSignUp = () => {
+    console.log('Go to Sign Up');
   };
 
-  // TODO
-  const onForgot = () => console.log('Forgot Password');
-  
-  const onSignUp = () => console.log('Go to Sign Up');
 
   
 
