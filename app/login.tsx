@@ -9,13 +9,17 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const isValid = email.trim().length > 0 && password.length >= 6;
 
+
   const onLogin = () => {
     console.log('Login pressed', { email, password });
   };
 
+  // TODO
   const onForgot = () => console.log('Forgot Password');
   
   const onSignUp = () => console.log('Go to Sign Up');
+
+  
 
   return (
     <SafeAreaView style={styles.safe}>      
@@ -80,7 +84,7 @@ export default function LoginScreen() {
               </Pressable>
 
               {/* Login button */}
-              <Pressable onPress={onLogin} style={({ pressed }) => [styles.loginBtn, pressed && { transform: [{ scale: 0.995 }] } ]}>
+              <Pressable onPress={onLogin} style={({ pressed }) => [styles.loginBtn, styles.loginBtnDisabled, pressed && { transform: [{ scale: 0.995 }] } ]}>
                 <Text style={styles.loginText}>Login</Text>
               </Pressable>
 
