@@ -33,8 +33,6 @@ export default function LoginScreen() {
   };
 
 
-  
-
   return (
     <SafeAreaView style={styles.safe}>      
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

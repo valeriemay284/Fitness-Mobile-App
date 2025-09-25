@@ -10,6 +10,7 @@ export default function Index() {
     >
       <Text>hellobello</Text>
       <Link href="/login">Login Page</Link>
+      <Link href="/register"> register page </Link>
     </View>
   );
 }

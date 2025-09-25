@@ -1,37 +1,112 @@
-/*import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+
+import colors from '../constants/colors';
+import formStyles from '../constants/formStyles';
+import { Button } from '@react-navigation/elements';
 
 export default function RegisterPage() {
-    // email validation i.e something@something.com
+    /* email validation: i.e something@something.com */
     const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
 
-    // state for each field
+    /* state for each field */ 
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirm, setConfirm] = useState('')
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
+    const [confirm, setConfirm] = useState('');
+
+    // sign up: name email
+    // create login: password username
+
+    const onRegister = () => {
+        const[name, setName] = useState('');
+        const[email, setEmail] = useState('');
+    }
+
+    const onCreateLogin = () => {
+        const [password, setPassword] = useState('');
+        const [user, setUser] = useState('');
+    }
+
+    const 
+
+    const [serverMessage, setServerMessage] = useState('');
     
-    /* validation 
+    /* email & password validation */
     const emailOk = isEmail(email.trim());
     const passOk = password.length >= 6;
     const matchOk = password === confirm && confirm.length > 0;
 
-    // form is valid if all checks pass
+    /* form is valid if all checks pass */
     const formValid = emailOk && passOk && matchOk;
 
-    const onSignUp = () => {
-        console.log('Signup successful', {email, password});
+    /* submit handler + send to backend*/
+    const REGISTER_URL = 'http://10.41.223.239:8080/api/signup';
+    
+    const onSignUp = async () => {
+        if (!formValid) return;
+
+        try {
+            const response = await fetch(REGISTER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email.trim(), password }),
+            });
+
+            const data = await response.json();
+            console.log("Backend response:", data);
+
+            // assume backend sends back a .message field
+
+            if (!response.ok && data?.message) {
+                setServerMessage(data.message);
+            } else if (response.ok) {
+                setServerMessage("User registereed successfully");
+            }
+        } catch (err) {
+            console.error("Register error:", err);
+        }
     };
+    
+    const onLogIn = () => console.log('Go to Login'); 
 
-    const onLogIn = () => console.log('Go to Log In'); */
-
-    /*return (
-        <SafeAreaView style = {StyleSheet.safe}>
+    /* TODO visible error messages */
+    
+    return (
+        <SafeAreaView style={styles.safe}>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={colors.primaryDark}>
+                <View>
+
+                        <View>
+                            <Text>Welcome!</Text>
+                        </View>
+
+                        <View>
+                            <TextInput
+                                placeholder="Name"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="none"
+                                value={name}
+                                onChangeText={setName} />
+                        </View>
+
+                        <View>
+                            {/* email */}
+                            <TextInput
+                                placeholder="Email address"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="none"
+                                autoComplete="email"
+                                keyboardType="email-address"
+                                value={email}
+                                onChangeText={setEmail}
+                                returnKeyType="next"
+                            />
+                        </View>
+
+                    <Button onPress={onRegister}>sign up</Button>
+                    <Button onPress={onCreateLogin}>create login</Button>
 
                 </View>
 
@@ -40,45 +115,16 @@ export default function RegisterPage() {
     )
 }
 
-const colors = {
-  primaryDark: '#42564F',
-  primary: '#C0EB6A',
-  background: '#F7F6E7',
-  cardBg: '#DFDDC5',
-  accent: '#C0EB6A',
-  textMuted: '#6B7280',
-};
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#42564F',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+    safe: { flex: 1, backgroundColor: colors.primaryDark },
+    screen: { flex: 1, backgroundColor: colors.primaryDark },
+    
+    inputIcon: { position: 'absolute', left: 14, top: 16, opacity: 0.8 },
+    eyeBtn: { position: 'absolute', right: 14, top: 14 },
+    
+    loginLink: { color: colors.primaryDark, fontWeight: '700' },
 
-    signupBtn: {
-        marginTop: 16,
-        height: 52,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.accent,
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 3,
-}, 
-
-signupBtnDisabled: { opacity: 0.5 },
-  signupText: { fontSize: 16, fontWeight: '700', color: colors.primaryDark },
-
-  loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
-  loginText: { color: colors.textMuted },
-  loginLink: { color: colors.primaryDark, fontWeight: '700' },
-
-}) */
+}) 
 
 
 
