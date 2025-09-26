@@ -114,7 +114,7 @@ export default function RegisterPage() {
                         textContentType='password'
                         />
                         <Pressable accessibilityRole="button" onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn} hitSlop={8}>
-                            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} />
+                            <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} />
                         </Pressable>
                     </View>
 
@@ -132,7 +132,7 @@ export default function RegisterPage() {
                         textContentType='password'
                         />
                         <Pressable accessibilityRole='button' onPress={()=> setShowConfirm(v => !v)} style={styles.eyeBtn} hitSlop={8}>
-                            <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} />
+                            <Ionicons name={showConfirm ? 'eye-outline' : 'eye-off-outline'} size={20} />
                         </Pressable>
                     </View>
 
