@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
@@ -38,8 +38,6 @@ export default function LoginScreen() {
 
   const onForgot = () => console.log('Forgot Password');
   
-  const onSignUp = () => console.log('Go to Sign Up');
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>      
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -48,7 +46,7 @@ export default function LoginScreen() {
 
             {/* header with panda mascot */}
             <View style={styles.heroWrap}>
-              <Text style={styles.welcome}>Welcome Back!</Text>
+              <Text style={formStyles.welcome}>Welcome Back!</Text>
               <Image
                 source={require('../assets/panda.png')}
                 style={styles.panda}
@@ -76,7 +74,7 @@ export default function LoginScreen() {
                 />
               </View>
 
-              {/* Password */}
+              {/* password */}
               <View style={[formStyles.inputWrap, { marginTop: 14 }]}>
                 <Ionicons name="lock-closed-outline" size={18} style={styles.inputIcon} />
                 <TextInput
@@ -94,26 +92,29 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
 
-              {/* Forgot password */}
+              {/* forgot password */}
               <Pressable onPress={onForgot} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
                 <Text style={styles.forgot}>Forgot Password?</Text>
               </Pressable>
 
-              {/* Login button */}
+              {/* login button */}
               <Pressable onPress={onLogin} 
               disabled={!isValid} 
               style={({ pressed }) => [formStyles.button, !isValid && formStyles.buttonDisabled, pressed && { transform: [{ scale: 0.995 }] } ]}> 
                 <Text style={formStyles.buttonText}>Login</Text> 
               </Pressable>
 
-              {/* Sign up link */}
-              <View style={formStyles.rowCenter}>
-                <Text style={formStyles.mutedText}>Don't have an account? </Text>
-                <Pressable onPress={onSignUp}>
+              {/* sign up link */}
+              <Link href="/register" asChild>
+              <Pressable>
+                <View style={formStyles.rowCenter}>
+                  <Text style={formStyles.mutedText}>Don't have an account? </Text>
                   <Text style={styles.signupLink}>Sign Up</Text>
-                </Pressable>
+                </View>
+              </Pressable>
+              </Link>
+              
               </View>
-            </View>
         <View
         pointerEvents="none" 
         style={{ 
@@ -133,15 +134,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark },
   screen: { flex: 1, backgroundColor: colors.primaryDark },
-
-  welcome: {
-    fontFamily: 'Poppins',
-    fontSize: 30,
-    fontWeight: '600',
-    color: '#FFFFFF', 
-    marginBottom: -10,
-    textAlign: 'center',
-  },
 
   heroWrap: {
     backgroundColor: 'transparent',

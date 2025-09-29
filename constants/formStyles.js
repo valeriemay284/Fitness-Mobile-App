@@ -71,6 +71,15 @@ const formStyles = StyleSheet.create({
   mutedText: {
     color: colors.textMuted,
   },
+
+  welcome: {
+    fontFamily: 'Poppins',
+    fontSize: 30,
+    fontWeight: '600',
+    color: '#FFFFFF', 
+    marginBottom: -10,
+    textAlign: 'center',
+  },
 });
 
 export default formStyles;

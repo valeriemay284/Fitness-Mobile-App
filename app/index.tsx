@@ -11,6 +11,7 @@ export default function Index() {
       <Text>hellobello</Text>
       <Link href="/login">Login Page</Link>
       <Link href="/register"> register page </Link>
+      <Link href="/user_info">user info</Link>
     </View>
   );
 }

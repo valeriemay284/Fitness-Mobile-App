@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { Link } from 'expo-router';
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
-export default function RegisterPage() {
+export default function RegisterScreen() {
     /* email validation: i.e something@something.com */
     const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
 
@@ -65,7 +65,7 @@ export default function RegisterPage() {
         <SafeAreaView style={styles.safe} edges={['top']}>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <View style={styles.screen}>
-                    <Text style={styles.welcome}>Welcome!</Text>
+                    <Text style={formStyles.welcome}>Welcome!</Text>
                 </View>
 
                 <View style={[formStyles.card, { paddingBottom: 250 + insets.bottom }]}>
@@ -88,7 +88,7 @@ export default function RegisterPage() {
                         <Ionicons name="mail-outline" size={18} style={styles.inputIcon} />
                         <TextInput
                         style={formStyles.input}
-                        placeholder='Email'
+                        placeholder='Email address'
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize='none'
                         autoComplete='email'
@@ -144,12 +144,14 @@ export default function RegisterPage() {
                     </Pressable>
 
                     {/* login link */} 
-                    <View style={formStyles.rowCenter}>
-                        <Text style={formStyles.mutedText}>Already have an account? </Text>
-                        <Pressable onPress={onLogIn}>
+                    <Link href="/login" asChild>
+                    <Pressable>
+                        <View style={formStyles.rowCenter}>
+                            <Text style={formStyles.mutedText}>Already have an account? </Text>
                             <Text style={styles.loginLink}>Login</Text>
-                        </Pressable>
-                    </View>           
+                            </View>   
+                    </Pressable>   
+                    </Link>     
 
 
                 </View>
@@ -165,15 +167,6 @@ export default function RegisterPage() {
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.primaryDark },
     screen: { flex: 1, backgroundColor: colors.primaryDark },
-
-    welcome: {
-    fontFamily: 'Poppins',
-    fontSize: 30,
-    fontWeight: '600',
-    color: '#FFFFFF', 
-    marginBottom: -10,
-    textAlign: 'center',
-  },
     
     inputIcon: { position: 'absolute', left: 14, top: 16, opacity: 0.8 },
     eyeBtn: { position: 'absolute', right: 14, top: 14 },
