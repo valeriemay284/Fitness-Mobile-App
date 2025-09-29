@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
@@ -39,10 +39,10 @@ export default function RegisterScreen() {
             const response = await fetch(REGISTER_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email.trim(), password }),
+                body: JSON.stringify({ username: username.trim(), id: email.trim(), password }),
             });
 
-            const data = await response.json();
+            const data = await response.text();
             console.log("Backend response:", data);
 
             // assume backend sends back a .message field
