@@ -1,10 +1,9 @@
-import React from "react";
-import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import React, { useState } from "react";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import colors from '../constants/colors';
-import formStyles from '../constants/formStyles';
+import formStyles from "@/constants/formStyles";
 
 export default function UserInfoScreen() {
     /* state for each field*/
@@ -21,33 +20,37 @@ export default function UserInfoScreen() {
                 <View>
                     <Text style={styles.title}>title here</Text>
                     {/* age field*/}
-                    <View>
+                    <View style={formStyles.inputWrap}>
                         <TextInput
-                        /* style =*/ 
+                        style={formStyles.input}
                         placeholder="Age"
+                        placeholderTextColor={colors.textMuted}
                         value={age}
                         onChangeText={setAge}
                         returnKeyType="next"/>
                 
                     </View>
                 </View>
-                
+
                 {/* height field*/}
-                <View>
+                <View style={formStyles.inputWrap}>
                     <TextInput
+                    style={formStyles.input}
                     placeholder="Height"
+                    placeholderTextColor={colors.textMuted}
                     />
                 </View>
 
                 {/* weight field*/}
-                <View>
+                <View style={formStyles.inputWrap}>
                     <TextInput
+                    style={formStyles.input}
                     placeholder="Weight"
+                    placeholderTextColor={colors.textMuted}
                     />
                 </View>
             
             </KeyboardAvoidingView>
-
         </SafeAreaView>
     )
 }

@@ -30,7 +30,7 @@ export default function RegisterScreen() {
     const formValid = emailOk && passOk && matchOk;
 
     /* submit handler + send to backend*/
-    const REGISTER_URL = 'http://10.41.223.239:8080/api/signup';
+    const REGISTER_URL = 'http://10.41.222.236:8080/api/createlogin';
     
     const onSignUp = async () => {
         if (!formValid) return;
