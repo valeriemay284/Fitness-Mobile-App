@@ -1,18 +1,25 @@
+import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
+import { SplashScreen } from "expo-router";
+import { PaperProvider } from "react-native-paper";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Poppins: require("../assets/fonts/Poppins-Regular.ttf"),
   });
 
-  // keep splash until fonts load
+  // Keep splash until fonts load
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
 
-  return <Stack screenOptions={{ headerShown: false }}/>;
+  // Wrap your Stack (navigator) in PaperProvider here
+  return (
+    <PaperProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </PaperProvider>
+  );
 }

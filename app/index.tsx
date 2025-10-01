@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Dashboard from './Dashboard';
 
 export default function Index() {
   return(
@@ -12,6 +13,7 @@ export default function Index() {
       <Link href="/login">Login Page</Link>
       <Link href="/register"> register page </Link>
       <Link href="/user_info">user info</Link>
+      <Link href='/Dashboard'>Dashboard</Link>
     </View>
   );
 }
