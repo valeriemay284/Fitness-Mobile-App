@@ -14,7 +14,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const isValid = email.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://172.20.10.3:8080/api/login';
+  const LOGIN_URL = 'http://10.41.212.138:8080/api/login';
 
   const onLogin = async() => {
     try {
