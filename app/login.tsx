@@ -14,16 +14,18 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const isValid = email.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://10.41.212.138:8080/api/login';
+  const LOGIN_URL = 'http://192.168.1.213:8080/api/login';
 
   const onLogin = async() => {
     try {
     const response = await fetch(LOGIN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        id: email.toLowerCase(),  // ✅ this key must match backend Login.id
+        password: password
+      }),
     });
-
     const data = await response.json();
     console.log("Backend response:", data);
 
@@ -36,7 +38,7 @@ export default function LoginScreen() {
     console.error("Login error:", err);
   }
 };
-const onForgot = () => router.push("forgotPassword"as any);
+const onForgot = () => router.push("ForgotPasswordScreen"as any);
 
 return (
     <SafeAreaView style={styles.safe} edges={['top']}>      

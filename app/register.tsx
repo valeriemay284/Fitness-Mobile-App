@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
-  const REGISTER_URL = 'http://10.41.222.236:8080/api/createlogin';
+  const REGISTER_URL = 'http://192.168.1.213:8080/api/createlogin';
 
   const onSignUp = async () => {
     if (!formValid) return;
