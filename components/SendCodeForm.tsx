@@ -13,7 +13,7 @@ interface SendCodeFormProps {
 
 // Component to send verification code to backend
 export default function SendCodeForm({ id, setId, onCodeSent, setLoading }: SendCodeFormProps) {
-  const BACKEND_URL = "http://192.168.1.213:8080/api"; // Update to your backend IP
+  const BACKEND_URL = "http://10.41.219.41:8080/api"; // Update to your backend IP
   const [localLoading, setLocalLoading] = useState(false);
 
   // Send recovery code to backend
