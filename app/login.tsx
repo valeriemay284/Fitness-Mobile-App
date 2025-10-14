@@ -5,6 +5,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, Tex
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
+import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -13,16 +14,18 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const isValid = email.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://:8080/api/login';
+  const LOGIN_URL = 'http://10.41.219.41:8080/api/login';
 
   const onLogin = async() => {
     try {
     const response = await fetch(LOGIN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        id: email.toLowerCase(),  // ✅ this key must match backend Login.id
+        password: password
+      }),
     });
-
     const data = await response.json();
     console.log("Backend response:", data);
 
@@ -35,10 +38,9 @@ export default function LoginScreen() {
     console.error("Login error:", err);
   }
 };
+const onForgot = () => router.push("ForgotPasswordScreen"as any);
 
-  const onForgot = () => console.log('Forgot Password');
-  
-  return (
+return (
     <SafeAreaView style={styles.safe} edges={['top']}>      
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Container paints the background behind the rounded card */}

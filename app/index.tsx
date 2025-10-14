@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Dashboard from './Dashboard';
+import Dashboard from './(provider)/Dashboard';
 
 export default function Index() {
   return(
