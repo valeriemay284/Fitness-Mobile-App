@@ -1,67 +1,116 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Card, Text, IconButton, useTheme } from "react-native-paper";
+import { View, Text, StyleSheet, Image, Pressable, ScrollView } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import colors from "../constants/colors";
+import formStyles from "../constants/formStyles";
+
+type RoutePath = "/profile" | "/workout" | "/calories" | "/settings" | "/library";
 
 export default function Dashboard() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const theme = useTheme(); //  gets the theme from PaperProvider
+
+  const menuItems: { title: string; icon: any; route: RoutePath }[] = [
+    { title: "Profile", icon: "person-circle-outline", route: "/profile" },
+    { title: "Workout", icon: "barbell-outline", route: "/workout" },
+    { title: "Calories", icon: "flame-outline", route: "/calories" },
+    { title: "Settings", icon: "settings-outline", route: "/settings" },
+    { title: "Library", icon: "book-outline", route: "/library" },
+  ];
 
   return (
-    <View style={styles.container}>
-      {/* Profile */}
-      <Card style={styles.card} onPress={() => router.push("/profile")}>
-        <Card.Content style={styles.cardContent}>
-          <IconButton icon="account" size={40} iconColor={theme.colors.primary} />
-          <Text variant="titleMedium">Profile</Text>
-        </Card.Content>
-      </Card>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <ScrollView contentContainerStyle={[styles.screen, { paddingBottom: 20 + insets.bottom }]}>
+        {/* Header Section with Mascot */}
+        <View style={styles.heroWrap}>
+          <Text style={formStyles.welcome}>Dashboard</Text>
+          <Image
+            source={require("../assets/panda.png")}
+            style={styles.panda}
+            resizeMode="contain"
+          />
+        </View>
 
-      {/* Workout */}
-      <Card style={styles.card} onPress={() => router.push("/workout")}>
-        <Card.Content style={styles.cardContent}>
-          <IconButton icon="dumbbell" size={40} iconColor={theme.colors.primary} />
-          <Text variant="titleMedium">Workout</Text>
-        </Card.Content>
-      </Card>
+        {/* Main Card Section */}
+        <View style={[formStyles.card, styles.cardContainer]}>
+          <Text style={styles.sectionTitle}>Your Tools</Text>
 
-      {/* Calories */}
-      <Card style={styles.card} onPress={() => router.push("/calories")}>
-        <Card.Content style={styles.cardContent}>
-          <IconButton icon="fire" size={40} iconColor={theme.colors.primary} />
-          <Text variant="titleMedium">Calories</Text>
-        </Card.Content>
-      </Card>
-
-      {/* Settings */}
-      <Card style={styles.card} onPress={() => router.push("/settings")}>
-        <Card.Content style={styles.cardContent}>
-          <IconButton icon="cog" size={40} iconColor={theme.colors.primary} />
-          <Text variant="titleMedium">Settings</Text>
-        </Card.Content>
-      </Card>
-    </View>
+          <View style={styles.grid}>
+            {menuItems.map((item, index) => (
+              <Pressable
+                key={index}
+                onPress={() => router.push(item.route)}
+                style={({ pressed }) => [
+                  styles.cardButton,
+                  pressed && { transform: [{ scale: 0.97 }] },
+                ]}
+              >
+                <Ionicons name={item.icon} size={38} color={colors.primaryDark} />
+                <Text style={styles.cardText}>{item.title}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  safe: { flex: 1, backgroundColor: colors.primaryDark },
+  screen: { flexGrow: 1, backgroundColor: colors.primaryDark },
+
+  heroWrap: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    height: 220,
+  },
+  panda: {
+    width: 150,
+    height: 150,
+    alignSelf: "center",
+    marginBottom: -40,
+  },
+
+  cardContainer: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 12,
+  },
+
+  grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    padding: 10,
+    width: "100%",
   },
-  card: {
+
+  cardButton: {
     width: "40%",
-    margin: 10,
-    borderRadius: 12,
-    elevation: 3,
-  },
-  cardContent: {
+    backgroundColor: colors.cardBgLight,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 20,
+    marginVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  cardText: {
+    color: colors.text,
+    fontWeight: "600",
+    fontSize: 16,
+    marginTop: 6,
   },
 });

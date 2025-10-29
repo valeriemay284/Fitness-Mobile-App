@@ -22,7 +22,7 @@ export default function LoginScreen() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: email.toLowerCase(),  // ✅ this key must match backend Login.id
+        id: email.toLowerCase(),  //  this key must match backend Login.id
         password: password
       }),
     });
