@@ -9,10 +9,10 @@ import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const isValid = email.trim().length > 0 && password.length >= 6;
+  const isValid = username.trim().length > 0 && password.length >= 6;
 
   const LOGIN_URL = 'http://10.41.219.41:8080/api/login';
 
@@ -22,9 +22,7 @@ export default function LoginScreen() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: email.toLowerCase(),  //  this key must match backend Login.id
-        password: password
-      }),
+        username: username, password: password}),
     });
     const data = await response.json();
     console.log("Backend response:", data);
@@ -59,24 +57,23 @@ return (
             {/* Bottom sheet-style card with rounded TOP corners */}
             <View style={[formStyles.card, { paddingBottom: 20 + insets.bottom }]}>
 
-              {/* Email */}
+              {/* Username */}
               <View style={formStyles.inputWrap}>
                 <Ionicons name="mail-outline" size={18} style={styles.inputIcon} />
                 <TextInput
                   style={formStyles.input}
-                  placeholder="Email address"
+                  placeholder="Username"
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  value={email}
-                  onChangeText={setEmail}
+                  autoComplete="username"
+                  value={username}
+                  onChangeText={setUsername}
                   returnKeyType="next"
                   textContentType="username"
                 />
               </View>
 
-              {/* password */}
+              {/* Password */}
               <View style={[formStyles.inputWrap, { marginTop: 14 }]}>
                 <Ionicons name="lock-closed-outline" size={18} style={styles.inputIcon} />
                 <TextInput
@@ -94,19 +91,19 @@ return (
                 </Pressable>
               </View>
 
-              {/* forgot password */}
+              {/* Forgot password */}
               <Pressable onPress={onForgot} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
                 <Text style={styles.forgot}>Forgot Password?</Text>
               </Pressable>
 
-              {/* login button */}
+              {/* Login button */}
               <Pressable onPress={onLogin} 
               disabled={!isValid} 
               style={({ pressed }) => [formStyles.button, !isValid && formStyles.buttonDisabled, pressed && { transform: [{ scale: 0.995 }] } ]}> 
                 <Text style={formStyles.buttonText}>Login</Text> 
               </Pressable>
 
-              {/* sign up link */}
+              {/* Sign up link */}
               <Link href="/register" asChild>
               <Pressable>
                 <View style={formStyles.rowCenter}>

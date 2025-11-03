@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
@@ -15,6 +16,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverMessage, setServerMessage] = useState('');
+  const router = useRouter();
 
   const isEmail = (s: string) => /.+@.+\..+/.test(String(s).toLowerCase());
 
@@ -23,7 +25,7 @@ export default function RegisterScreen() {
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
-  const REGISTER_URL = 'http://192.168.1.213:8080/api/createlogin';
+  const REGISTER_URL = 'http://10.41.218.45:8080/api/createlogin';
 
   const onSignUp = async () => {
     if (!formValid) return;
@@ -41,8 +43,9 @@ export default function RegisterScreen() {
       if (!response.ok) {
         setServerMessage(data.message || 'Registration failed');
       } else {
-        setServerMessage('User registered successfully');
-      }
+        setServerMessage('User registered successfully!');
+        router.replace("/user_info");
+    }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setServerMessage(err.message);
@@ -52,8 +55,6 @@ export default function RegisterScreen() {
       console.error('Register error:', err);
     }
   };
-
-  const onLogIn = () => console.log('Go to Login');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
