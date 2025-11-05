@@ -22,7 +22,7 @@ export default function Dashboard() {
     { title: "Library", icon: "book-outline", route: "/library" },
   ];
 
-  // Logout login
+  // Logout logic
   const handleLogout = async () => {
     try {
       await clearUser();
