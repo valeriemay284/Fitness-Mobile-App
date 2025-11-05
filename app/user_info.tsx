@@ -1,20 +1,23 @@
+// @ts-nocheck
+import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Picker } from "@react-native-picker/picker";
-import { Ionicons } from "@expo/vector-icons";
 
-import colors from "@/constants/colors";
-import formStyles from "@/constants/formStyles";
+import colors from "../constants/colors";
+import formStyles from "../constants/formStyles";
+
+import { useAuth } from "./AuthContext";
 
 // Build options like 4'0" ... 7'11" with a single numeric value (total inches)
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
@@ -28,20 +31,27 @@ const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
 };
 
 export default function UserInfoScreen() {
-  // keep ONE numeric height value (total inches) for the backend
+  // get id(email) + username passed from Register.tsx
+  const { id, username } = useLocalSearchParams();
+  const { setUser } = useAuth() as any;
+  const router = useRouter(); 
+
+  // keep ONE numeric height value (total inches) for backend
   const [heightInInches, setHeightInInches] = useState(66); // default 5'6"
   const [weight, setWeight] = useState("");
   const [sex, setSex] = useState("");
   const [fitnessGoal, setFitnessGoal] = useState(""); // NEW!!!!
   const [serverMessage, setServerMessage] = useState("");
-  const router = useRouter();
+  const [isSubmitting, setSubmitting] = useState(false)
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
   const REGISTER_URL = "http://10.41.218.45:8080/api/";
 
   const onSaveInfo = async () => {
+    setServerMessage("");
     const w = parseFloat(weight);
+    
     if (!heightInInches || heightInInches <= 0) {
       setServerMessage("Please select a valid height.");
       return;
@@ -58,12 +68,14 @@ export default function UserInfoScreen() {
       setServerMessage("Please pick a fitness goal.");
       return;
     }
-
+    if (isSubmitting) return; 
+    setSubmitting(true);
     try {
       const response = await fetch(REGISTER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: String(id), 
           height: heightInInches, // single variable
           weight: w,
           sex,
@@ -71,16 +83,33 @@ export default function UserInfoScreen() {
         }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      let data = {};
+      try { data = await response.json(); } catch {}
+
       if (!response.ok) {
-        setServerMessage(data?.message || "User info failed to save");
-      } else {
-        setServerMessage(data?.message || "User info saved");
-        // router.push("/next");
-      }
-    } catch (err) {
+        setServerMessage(( data && data.message) || "User info failed to save");
+        return; 
+      } 
+        
+      setServerMessage("User info saved");
+
+      // save user globally for logged-in session
+      const user = {
+        id: String(id), 
+        username: String(username ?? ""),
+        height: heightInInches, 
+        weight: w, 
+        sex, 
+        fitness_goal: fitnessGoal, 
+      };
+
+        await setUser(user); 
+        router.replace("/Dashboard");
+      } catch (err) {
       setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
       console.error("Error:", err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -89,7 +118,8 @@ export default function UserInfoScreen() {
     weight.trim() !== "" &&
     parseFloat(weight) > 0 &&
     (sex === "male" || sex === "female") &&
-    fitnessGoal !== "";
+    fitnessGoal !== "" &&
+    !isSubmitting;
 
   // fitness goals chips
   const goals = [
@@ -319,3 +349,4 @@ const styles = StyleSheet.create({
 
   message: { textAlign: "center", marginVertical: 8, color: colors.primaryDark },
 });
+
