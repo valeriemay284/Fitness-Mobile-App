@@ -5,12 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
+import { useAuth } from "./AuthContext";
 
 type RoutePath = "/profile" | "/workout" | "/calories" | "/settings" | "/library";
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user, clearUser } = useAuth() as any;
 
   const menuItems: { title: string; icon: any; route: RoutePath }[] = [
     { title: "Profile", icon: "person-circle-outline", route: "/profile" },
@@ -20,8 +22,30 @@ export default function Dashboard() {
     { title: "Library", icon: "book-outline", route: "/library" },
   ];
 
+  // Logout login
+  const handleLogout = async () => {
+    try {
+      await clearUser();
+      router.replace("/login")
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
+      // Logout button in top-right corner 
+      <Pressable onPress={handleLogout}
+        style={[styles.logoutBtn,
+          { top: insets.top + 8 },  
+        ]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Log out">
+          <Ionicons name="log-out-outline" size={22} color="#fff"/>
+          <Text style={styles.logoutText}>Log out</Text>
+      </Pressable>
+
       <ScrollView contentContainerStyle={[styles.screen, { paddingBottom: 20 + insets.bottom }]}>
         {/* Header Section with Mascot */}
         <View style={styles.heroWrap}>
@@ -113,4 +137,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 6,
   },
+
+  logoutBtn: {
+    position: "absolute", 
+    right: 12, 
+    zIndex: 10, 
+    flexDirection: "row",
+    alignItems: "center", 
+    gap: 6, 
+    backgroundColor: "rgba(255,255,255,0.15)", 
+    borderRadius: 999, 
+    paddingHorizontal: 12, 
+    paddingVertical: 8
+  }, 
+
+  logoutText: { color: "#fff", fontWeight: "700", fontSize: 12 },
 });
