@@ -1,43 +1,68 @@
+// @ts-nocheck
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from './AuthContext';
+
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
-import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
+  const { setUser } = useAuth() as any; 
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const isValid = email.trim().length > 0 && password.length >= 6;
+  const [serverMessage, setServerMessage] = useState('');
 
-  const LOGIN_URL = 'http://10.41.219.41:8080/api/login';
+  const [isSubmitting, setSubmitting] = useState(false);
+
+  const isValid = username.trim().length > 0 && password.length >= 6;
+
+  const LOGIN_URL = 'http://10.41.217.78:8080/api/login';
 
   const onLogin = async() => {
+    if (!isValid || isSubmitting) return; 
+    setSubmitting(true)
+
     try {
     const response = await fetch(LOGIN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: email.toLowerCase(),  //  this key must match backend Login.id
-        password: password
-      }),
+      body: JSON.stringify({ username: username.trim(), password: password }),
     });
-    const data = await response.json();
-    console.log("Backend response:", data);
+
+    let data = {};
+    try { data = await response.json(); } catch {}
 
     if(!response.ok) {   
-      console.error("Login failed");
-    } else {
-      console.log("Login successful");
+      setServerMessage((data && data.message) || "Login failed. Please check your credentials.");
+      return; 
     }
-  }catch (err) {
-    console.error("Login error:", err);
+
+    setServerMessage("Login successful!");
+
+    const user = {
+      id: String(data.id ?? ""), 
+      name: String(data.name ?? ""),
+      username: String(data.username ?? username.trim()), 
+      height: data.height != null ? Number(data.height) : null,
+      weight: data.weight != null ? Number(data.weight) : null,
+      sex: String(data.sex ?? ''),
+    };
+
+    await setUser(user); 
+    router.replace('/Dashboard'); 
+  } catch (err) {
+    console.error("Login error:", err); 
+    setServerMessage(err instanceof Error ? err.message : 'An unexpected error occurred');
+  } finally {
+    setSubmitting(false); 
   }
 };
+
 const onForgot = () => router.push("ForgotPasswordScreen"as any);
 
 return (
@@ -59,24 +84,23 @@ return (
             {/* Bottom sheet-style card with rounded TOP corners */}
             <View style={[formStyles.card, { paddingBottom: 20 + insets.bottom }]}>
 
-              {/* Email */}
+              {/* Username */}
               <View style={formStyles.inputWrap}>
                 <Ionicons name="mail-outline" size={18} style={styles.inputIcon} />
                 <TextInput
                   style={formStyles.input}
-                  placeholder="Email address"
+                  placeholder="Username"
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  value={email}
-                  onChangeText={setEmail}
+                  autoComplete="username"
+                  value={username}
+                  onChangeText={setUsername}
                   returnKeyType="next"
                   textContentType="username"
                 />
               </View>
 
-              {/* password */}
+              {/* Password */}
               <View style={[formStyles.inputWrap, { marginTop: 14 }]}>
                 <Ionicons name="lock-closed-outline" size={18} style={styles.inputIcon} />
                 <TextInput
@@ -94,19 +118,19 @@ return (
                 </Pressable>
               </View>
 
-              {/* forgot password */}
+              {/* Forgot password */}
               <Pressable onPress={onForgot} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
                 <Text style={styles.forgot}>Forgot Password?</Text>
               </Pressable>
 
-              {/* login button */}
+              {/* Login button */}
               <Pressable onPress={onLogin} 
               disabled={!isValid} 
               style={({ pressed }) => [formStyles.button, !isValid && formStyles.buttonDisabled, pressed && { transform: [{ scale: 0.995 }] } ]}> 
                 <Text style={formStyles.buttonText}>Login</Text> 
               </Pressable>
 
-              {/* sign up link */}
+              {/* Sign up link */}
               <Link href="/register" asChild>
               <Pressable>
                 <View style={formStyles.rowCenter}>
