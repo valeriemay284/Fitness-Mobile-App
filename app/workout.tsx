@@ -8,3 +8,4 @@ export default function Workout() {
   );
 }
  //placeholders
+ //tutorials + exercises (reccommend based on needs (next semester))

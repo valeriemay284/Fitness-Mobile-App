@@ -28,7 +28,10 @@ export default function ScanResultScreen() {
       return null;
     }
   }, [product]);
-
+  /*        
+    A simple key-value storage system (like a dictionary or map) 
+    that saves data permanently on the phone — even after the app is closed or restarted.
+  */
   // Save the current product to AsyncStorage (user's library)
   const onAddToLibrary = async () => {
     if (!productData) return;
