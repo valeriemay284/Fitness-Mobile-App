@@ -6,9 +6,8 @@ import ResetPasswordForm from "../components/ResetPasswordForm";
 import { router } from "expo-router";
 
 export default function ForgotPasswordScreen() {
-  // -----------------------------
+
   // State variables
-  // -----------------------------
   const [id, setId] = useState("");           // User email or ID
   const [codeSent, setCodeSent] = useState(false); // Tracks if code was sent
   const [loading, setLoading] = useState(false);   // Global loading indicator
@@ -53,9 +52,8 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-// -----------------------------
+
 // Styles
-// -----------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
