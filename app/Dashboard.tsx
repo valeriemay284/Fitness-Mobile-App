@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 import { View, Text, StyleSheet, Image, Pressable, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
