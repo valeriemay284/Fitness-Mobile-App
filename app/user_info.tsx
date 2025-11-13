@@ -91,6 +91,7 @@ export default function UserInfoScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: String(id), 
+          username,
           height: heightInInches, // single variable
           weight: w,
           sex,
