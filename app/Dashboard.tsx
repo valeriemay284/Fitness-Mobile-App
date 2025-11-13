@@ -1,12 +1,12 @@
 // @ts-nocheck
-import React from "react";
-import { View, Text, StyleSheet, Image, Pressable, ScrollView } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../components/AuthContext";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
-import { useAuth } from "./AuthContext";
 
 type RoutePath = "/profile" | "/workout" | "/calories" | "/settings" | "/library";
 
