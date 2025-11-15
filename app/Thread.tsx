@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../constants/colors';
 import { Comment, Post } from '../src/types';
 
-const API_URL = 'http://10.40.138.156:8080'; // Use same backend URL as forum
+const API_URL = 'http://localhost:8080'; // Use same backend URL as forum
 
 
 const AVATAR = require('../assets/panda.png');
