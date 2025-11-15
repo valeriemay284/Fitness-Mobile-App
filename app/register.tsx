@@ -8,7 +8,7 @@ import formStyles from '../constants/formStyles';
 
 export default function RegisterScreen() {
     /* email validation: i.e something@something.com */
-    const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
+    const isEmail = (s: string) => /.+@.+\..+/.test(String(s).toLowerCase());
 
     /* state for each field */ 
     const insets = useSafeAreaInsets();
@@ -42,15 +42,16 @@ export default function RegisterScreen() {
                 body: JSON.stringify({ username: username.trim(), id: email.trim(), password }),
             });
 
-            const data = await response.text();
-            console.log("Backend response:", data);
+            const text = await response.text();
+            console.log("Backend response:", text);
+            let data: any = text;
+            try { data = JSON.parse(text); } catch {}
 
-            // assume backend sends back a .message field
-
+            // assume backend may send back a .message field
             if (!response.ok && data?.message) {
                 setServerMessage(data.message);
             } else if (response.ok) {
-                setServerMessage("User registereed successfully");
+                setServerMessage("User registered successfully");
             }
         } catch (err) {
             console.error("Register error:", err);

@@ -1,6 +1,10 @@
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
+import { ProfileProvider } from './ProfileContext';
+
+// Root layout wraps the whole app with `ProfileProvider` so profile state
+// is available to all screens via `useProfile()`.
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -14,5 +18,9 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null;
 
-  return <Stack screenOptions={{ headerShown: false }}/>;
+  return (
+    <ProfileProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ProfileProvider>
+  );
 }
