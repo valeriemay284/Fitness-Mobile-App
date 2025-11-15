@@ -12,7 +12,7 @@ import { Post } from '../src/types';
 // Backend: GET /api/getPosts, POST /api/makePost, POST /api/deletePost?id=<id>
 
 const AVATAR = require('../assets/panda.png');
-const API_URL = 'http://10.40.138.156:8080'; // Change to your backend URL; no trailing slash
+const API_URL = 'http://localhost:8080'; // Change to your backend URL; no trailing slash
 
 export default function ForumScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
