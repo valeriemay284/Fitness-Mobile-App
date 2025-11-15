@@ -129,7 +129,7 @@ Check browser/emulator console (F12 in Chrome DevTools or `npx react-native log-
 ### API_URL
 Located at top of both files:
 ```typescript
-const API_URL = 'http://10.40.138.156:8080';
+const API_URL = 'http://locakhost:8080';
 ```
 
 **For different environments:**
