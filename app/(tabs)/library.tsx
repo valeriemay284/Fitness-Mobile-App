@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Image, Alert,} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import colors from "../constants/colors";
-import formStyles from "../constants/formStyles";
+import React, { useEffect, useState } from "react";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import colors from "../../constants/colors";
+import formStyles from "../../constants/formStyles";
 
 /*
     This screen shows the list of saved items from AsyncStorage.
@@ -66,7 +66,7 @@ export default function LibraryScreen() {
         <View style={styles.heroWrap}>
           <Text style={formStyles.welcome}>Your Library</Text>
           <Image
-            source={require("../assets/panda.png")}
+            source={require("../../assets/panda.png")}
             style={styles.panda}
             resizeMode="contain"
           />

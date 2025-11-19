@@ -1,11 +1,8 @@
-// @ts-nocheck
-
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
@@ -18,58 +15,45 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverMessage, setServerMessage] = useState('');
-  const [isSubmitting, setSubmitting] = useState(false); // 🆕
-  const router = useRouter();
 
-  const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
+  const isEmail = (s: string) => /.+@.+\..+/.test(String(s).toLowerCase());
 
   const emailOk = isEmail(email.trim());
   const passOk = password.length >= 6;
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
-  const REGISTER_URL = 'http://10.41.218.45:8080/api/createlogin';
+  const REGISTER_URL = 'http://192.168.1.213:8080/api/createlogin';
 
   const onSignUp = async () => {
     if (!formValid) return;
-    setSubmitting(true);
-    setServerMessage(""); 
 
     try {
       const response = await fetch(REGISTER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username: username.trim(), 
-          id: email.trim().toLowerCase(), 
-          password,
-         }),
+        body: JSON.stringify({ username: username.trim(), id: email.trim(), password }),
       });
 
       // parse JSON safely
-      let data = {};
-      try { data = await response.json(); } catch{}
+      const data: { message?: string } = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setServerMessage(data && data.message || 'Registration failed');
-        return
+        setServerMessage(data.message || 'Registration failed');
       } else {
-        setServerMessage('User registered successfully!');
-        router.replace({
-          pathname: "/user_info",
-          params: {
-            id: String(data.id ?? email.trim().toLowerCase()), 
-            username: String(data.username ?? username.trim())
-          }
-        });
+        setServerMessage('User registered successfully');
       }
-    } catch (err) {
-      setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred.");
-      console.error("Register error:", err);
-    } finally {
-      setSubmitting(false); 
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setServerMessage(err.message);
+      } else {
+        setServerMessage('An unexpected error occurred');
+      }
+      console.error('Register error:', err);
     }
   };
+
+  const onLogIn = () => console.log('Go to Login');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -107,7 +91,7 @@ export default function RegisterScreen() {
               value={email}
               onChangeText={setEmail}
               returnKeyType="next"
-              textContentType="emailAddress"
+              textContentType="username"
             />
           </View>
 

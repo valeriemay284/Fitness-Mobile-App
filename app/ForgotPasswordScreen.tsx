@@ -1,21 +1,25 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView } from "react-native";
-import colors from "../constants/colors";
-import SendCodeForm from "../components/SendCodeForm";
-import ResetPasswordForm from "../components/ResetPasswordForm";
 import { router } from "expo-router";
+import React, { useState } from "react";
+import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import ResetPasswordForm from "../components/ResetPasswordForm";
+import SendCodeForm from "../components/SendCodeForm";
+import colors from "../constants/colors";
 
 export default function ForgotPasswordScreen() {
+  // Stores the user's email/ID input
+  const [id, setId] = useState("");
 
-  // State variables
-  const [id, setId] = useState("");           // User email or ID
-  const [codeSent, setCodeSent] = useState(false); // Tracks if code was sent
-  const [loading, setLoading] = useState(false);   // Global loading indicator
+  // Controls which step the user is on (send code → reset password)
+  const [codeSent, setCodeSent] = useState(false);
+
+  // Allows the child components to toggle a loading state
+  const [loading, setLoading] = useState(false);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        {/* Back button */}
+
+        {/* Navigation back to login */}
         <Text
           style={{ color: colors.primaryDark, fontWeight: "600", marginBottom: 20 }}
           onPress={() => router.back()}
@@ -23,10 +27,11 @@ export default function ForgotPasswordScreen() {
           ← Back to Login
         </Text>
 
-        {/* Screen title */}
+        {/* Screen heading */}
         <Text style={styles.title}>Forgot Password</Text>
 
-        {/* Conditional rendering: SendCodeForm or ResetPasswordForm */}
+        {/* Step 1: Enter ID + Send Code 
+            Step 2: Enter Code + New Password */}
         {!codeSent ? (
           <SendCodeForm
             id={id}
@@ -41,7 +46,7 @@ export default function ForgotPasswordScreen() {
           />
         )}
 
-        {/* Optional global loading indicator */}
+        {/* Shows a generic loading message (optional, controlled by child forms) */}
         {loading && (
           <Text style={{ textAlign: "center", marginTop: 10, color: colors.textMuted }}>
             Loading...
@@ -52,8 +57,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-
-// Styles
+// --- Styles ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,

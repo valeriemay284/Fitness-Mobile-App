@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, Alert } from "react-native";
-import colors from "../constants/colors";
-import formStyles from "../constants/formStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import React, { useState } from "react";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import colors from "../constants/colors";
+import formStyles from "../constants/formStyles";
 
 // Props for the ResetPasswordForm
 interface ResetPasswordFormProps {
@@ -16,7 +16,7 @@ export default function ResetPasswordForm({ id, setLoading }: ResetPasswordFormP
   const [code, setCode] = useState("");            // Verification code (optional for backend)
   const [newPassword, setNewPassword] = useState(""); // New password input
   const [showPassword, setShowPassword] = useState(false); // Toggle password visibility
-  const BACKEND_URL = "http://10.41.219.41:8080/api";
+  const BACKEND_URL = "http://192.168.1.213:8080/api";
 
   // Function to send new password to backend
   const resetPassword = async () => {

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Image,} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
-import colors from "../constants/colors";
-import formStyles from "../constants/formStyles";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View, } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import colors from "../../constants/colors";
+import formStyles from "../../constants/formStyles";
 
 /**
  * CaloriesPage allows users to track nutrition info.
@@ -124,7 +124,7 @@ export default function CaloriesPage() {
         <View style={styles.heroWrap}>
           <Text style={formStyles.welcome}>Calories Tracker</Text>
           <Image
-            source={require("../assets/panda.png")}
+            source={require("../../assets/panda.png")}
             style={styles.panda}
             resizeMode="contain"
           />

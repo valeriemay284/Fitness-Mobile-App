@@ -4,7 +4,7 @@ import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../components/AuthContext';
 
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
@@ -21,7 +21,7 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://10.41.217.78:8080/api/login';
+  const LOGIN_URL = 'http://192.168.1.213:8080/api/login';
 
   const onLogin = async() => {
     if (!isValid || isSubmitting) return; 
@@ -54,7 +54,7 @@ export default function LoginScreen() {
     };
 
     await setUser(user); 
-    router.replace('/Dashboard'); 
+    router.replace('/(tabs)'); 
   } catch (err) {
     console.error("Login error:", err); 
     setServerMessage(err instanceof Error ? err.message : 'An unexpected error occurred');

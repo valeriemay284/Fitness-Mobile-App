@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../components/AuthContext";
 
 // Build options like 4'0" ... 7'11" with a single numeric value (total inches)
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
@@ -46,7 +46,7 @@ export default function UserInfoScreen() {
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
-  const REGISTER_URL = "http://10.41.218.45:8080/api/";
+  const REGISTER_URL = "http://192.168.1.213:8080/api/";
 
   const onSaveInfo = async () => {
     setServerMessage("");
