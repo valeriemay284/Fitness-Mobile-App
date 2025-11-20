@@ -72,7 +72,7 @@ export default function UserInfoScreen() {
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
-  const REGISTER_URL = 'http://10.41.218.153:8080/api/signup';
+  const REGISTER_URL = 'http://10.41.211.252:8080/api/signup';
 
   const onSaveInfo = async () => {
     console.log("onSaveInfo triggered");
