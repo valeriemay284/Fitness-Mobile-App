@@ -1,59 +1,107 @@
+// @ts-nocheck
+
+/**
+ * RegisterScreen
+ * 
+ * Screen for creating a new account. Collects username, email, password,
+ * and confirm password. Validates inputs, calls the backend to create the
+ * login record, and on success forwards the user to the User Info Screen
+ * to complete their profile.
+ */
+
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
+
+  // Form fields
   const [username, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+
+  // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverMessage, setServerMessage] = useState('');
+  const [isSubmitting, setSubmitting] = useState(false); 
 
-  const isEmail = (s: string) => /.+@.+\..+/.test(String(s).toLowerCase());
+  const router = useRouter();
 
+  /** 
+   * Simple email format check
+   * 
+   * @param s Text to test as an email address.
+   * @return True if the string resembles an email address
+   */
+
+  const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
+
+  // Validation flags
   const emailOk = isEmail(email.trim());
   const passOk = password.length >= 6;
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
-  const REGISTER_URL = 'http://192.168.1.213:8080/api/createlogin';
+  const REGISTER_URL = 'http://10.41.211.252:8080/api/createlogin';
 
+  /**
+   * Attempts to register a new account with the provided credentials. 
+   * 
+   * Flow: 
+   * 1) Validate form fields (email, password length, confirmation).
+   * 2) POST credentials to the backend.
+   * 3) If successful, navigate to the User Info screen, taking email and username with. 
+   * 4) Otherwise, display server error message
+   */
   const onSignUp = async () => {
     if (!formValid) return;
+    setSubmitting(true);
+    setServerMessage(""); 
 
     try {
       const response = await fetch(REGISTER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), id: email.trim(), password }),
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          id: email.trim().toLowerCase(), 
+          password,
+         }),
       });
 
       // parse JSON safely
-      const data: { message?: string } = await response.json().catch(() => ({}));
+      let data = {};
+      try { data = await response.json(); } catch{}
 
       if (!response.ok) {
-        setServerMessage(data.message || 'Registration failed');
+        setServerMessage(data && data.message || 'Registration failed');
+        return
       } else {
-        setServerMessage('User registered successfully');
+        // Registration succeeded: proceed to profile completion
+        setServerMessage('User registered successfully!');
+        router.replace({
+          pathname: "/user_info",
+          params: {
+            id: String(data.id ?? email.trim().toLowerCase()), 
+            username: String(data.username ?? username.trim())
+          }
+        });
       }
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setServerMessage(err.message);
-      } else {
-        setServerMessage('An unexpected error occurred');
-      }
-      console.error('Register error:', err);
+    } catch (err) {
+      setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred.");
+      console.error("Register error:", err);
+    } finally {
+      setSubmitting(false); 
     }
   };
-
-  const onLogIn = () => console.log('Go to Login');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -91,7 +139,7 @@ export default function RegisterScreen() {
               value={email}
               onChangeText={setEmail}
               returnKeyType="next"
-              textContentType="username"
+              textContentType="emailAddress"
             />
           </View>
 
@@ -154,6 +202,9 @@ export default function RegisterScreen() {
   );
 }
 
+/**
+ * Style defintions for the RegisterScreen layout and controls. 
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark },
   screen: { flex: 1, backgroundColor: colors.primaryDark },

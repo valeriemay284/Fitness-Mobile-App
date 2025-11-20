@@ -1,4 +1,9 @@
 // @ts-nocheck
+/**
+ * UserInfoScreen
+ * Collects and submits user profile details after registration (name, height, weight, sex, fitness goal).
+ * Persists the user in global auth context on success and routes to /Dashboard
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -19,7 +24,14 @@ import formStyles from "../constants/formStyles";
 
 import { useAuth } from "../components/AuthContext";
 
-// Build options like 4'0" ... 7'11" with a single numeric value (total inches)
+/**
+ * Builds a list of height option ranging from minimum 4 feet to maximum 7 feet.
+ * Returns a single numeric value representing total height in inches to backend
+ * 
+ * @param minFeet The minimum feet value to include
+ * @param maxFeet The maximum feet value to include
+ * @return A list of height options for use in a Picker
+ */
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   const opts = [];
   for (let f = minFeet; f <= maxFeet; f++) {
@@ -30,6 +42,19 @@ const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   return opts;
 };
 
+/**
+ * UserInfoScreen component
+ * 
+ * Handles the following tasks: 
+ * - Collects user details (name, height, weight, sex, fitness goal)
+ * - Validates form inputs
+ * - Sends a POST request to the backend signup API
+ * - Saves the user in global context upon success
+ * - Redirects to the Dashboard screen
+ * 
+ * Includes platform-specific UI adjustments for iOS and Android
+ * 
+ */
 export default function UserInfoScreen() {
   // get id(email) + username passed from Register.tsx
   const { id, username } = useLocalSearchParams();
@@ -40,17 +65,30 @@ export default function UserInfoScreen() {
   const [heightInInches, setHeightInInches] = useState(66); // default 5'6"
   const [weight, setWeight] = useState("");
   const [sex, setSex] = useState("");
-  const [fitnessGoal, setFitnessGoal] = useState(""); // NEW!!!!
+  const [description, setDescription] = useState(""); // NEW!!!!
+  const [name, setName] = useState("")
   const [serverMessage, setServerMessage] = useState("");
   const [isSubmitting, setSubmitting] = useState(false)
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
-  const REGISTER_URL = "http://192.168.1.213:8080/api/";
+  const REGISTER_URL = 'http://10.41.211.252:8080/api/signup';
 
   const onSaveInfo = async () => {
+    console.log("onSaveInfo triggered");
     setServerMessage("");
     const w = parseFloat(weight);
+
+    console.log("Form data before submit:", {
+      id,
+      username,
+      heightInInches,
+      weight,
+      parsedWeight: w,
+      sex,
+      description,
+      name,
+    });
     
     if (!heightInInches || heightInInches <= 0) {
       setServerMessage("Please select a valid height.");
@@ -64,34 +102,42 @@ export default function UserInfoScreen() {
       setServerMessage("Please select male or female.");
       return;
     }
-    if (!fitnessGoal) {
+    if (!description) {
       setServerMessage("Please pick a fitness goal.");
       return;
     }
     if (isSubmitting) return; 
     setSubmitting(true);
     try {
+      console.log("Sending POST request to backend:", REGISTER_URL);
+
       const response = await fetch(REGISTER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: String(id), 
+          username,
           height: heightInInches, // single variable
           weight: w,
           sex,
-          fitness_goal: fitnessGoal, // NEW
-        }),
+          description, // NEW
+          name, 
+        })
       });
+
+      console.log("Response status:", response.status);
 
       let data = {};
       try { data = await response.json(); } catch {}
 
       if (!response.ok) {
         setServerMessage(( data && data.message) || "User info failed to save");
+        console.log("Response not OK:", data);
         return; 
       } 
         
       setServerMessage("User info saved");
+      console.log("User info saved successfully!");
 
       // save user globally for logged-in session
       const user = {
@@ -100,11 +146,15 @@ export default function UserInfoScreen() {
         height: heightInInches, 
         weight: w, 
         sex, 
-        fitness_goal: fitnessGoal, 
+        description, 
+        name,
       };
 
-        await setUser(user); 
-        router.replace("/Dashboard");
+      console.log("Calling setUser with:", user);
+      await setUser(user); 
+
+      console.log("Routing to /Dashboard...");
+      router.replace("/Dashboard");
       } catch (err) {
       setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
       console.error("Error:", err);
@@ -118,7 +168,7 @@ export default function UserInfoScreen() {
     weight.trim() !== "" &&
     parseFloat(weight) > 0 &&
     (sex === "male" || sex === "female") &&
-    fitnessGoal !== "" &&
+    description !== "" &&
     !isSubmitting;
 
   // fitness goals chips
@@ -138,6 +188,27 @@ export default function UserInfoScreen() {
         <View>
           <Text style={styles.title}>Let's personalize your experience!</Text>
         </View>
+
+        {/* Name */}
+        <View style={styles.block}>
+          <View style={styles.labelRow}>
+            <Ionicons name="barbell-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
+            <Text style={styles.label}>Your Name</Text>
+          </View>
+
+          <View style={formStyles.inputWrap}>
+            <Ionicons name="barbell-outline" size={18} style={styles.inputIcon} />
+            <TextInput
+              style={formStyles.input}
+              placeholder="Name"
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              returnKeyType="done"
+            />
+          </View>
+        </View>
+
 
         {/* Height */}
         <View style={styles.block}>
@@ -243,11 +314,11 @@ export default function UserInfoScreen() {
 
           <View style={styles.goalWrap}>
             {goals.map((g) => {
-              const active = fitnessGoal === g.value;
+              const active = description === g.value;
               return (
                 <Pressable
                   key={g.value}
-                  onPress={() => setFitnessGoal(g.value)}
+                  onPress={() => setDescription(g.value)}
                   style={[styles.goalChip, active && styles.goalChipActive]}
                 >
                   <Ionicons
@@ -282,6 +353,9 @@ export default function UserInfoScreen() {
   );
 }
 
+/**
+ * Style definitions for UserInfoScreen components
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cardBg },
   title: {
@@ -292,8 +366,8 @@ const styles = StyleSheet.create({
     marginVertical: 25,
   },
 
-  block: { gap: 5, marginBottom: 25 },
-
+  block: { gap: 2, marginTop: 10,  marginBottom: 7 },
+  
   labelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   labelIcon: { marginTop: 1 },
   label: {
@@ -305,7 +379,7 @@ const styles = StyleSheet.create({
   // Android + Web dropdown
   dropWrap: { zIndex: 10 },
   dropPicker: {
-    height: Platform.select({ ios: 44, android: 52, web: 44 }),
+    height: Platform.select({ ios: 40, android: 52, web: 44 }),
     color: "#111827",
     width: "100%",
   },

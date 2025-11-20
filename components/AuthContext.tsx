@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
     
     // passes data to all screens
     const value = useMemo(() => {
-        console.log("[AuthContext] Providing context value:", { user, isReady }); // added
+        console.log("[AuthContext] Providing context value:", { user, isReady }); // ✅ added
         return { user, isReady, setUser, clearUser };
     }, [user, isReady]);
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
