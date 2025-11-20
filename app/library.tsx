@@ -1,3 +1,17 @@
+/**
+ * LibraryScreen
+ *
+ * Displays the list of food items previously saved to AsyncStorage from
+ * the ScanResult screen. Users can remove individual entries or clear the
+ * entire library, and can navigate back to the Calories scanner to add more.
+ *
+ * Flow:
+ * - On mount, loads the "library" array from AsyncStorage.
+ * - Shows an empty state with a quick link to scan when there are no items.
+ * - Renders each saved item with basic nutrition info and a Remove button.
+ * - Offers a destructive Clear Library action.
+ */
+
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Image, Alert,} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -6,12 +20,6 @@ import { useRouter } from "expo-router";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
-/*
-    This screen shows the list of saved items from AsyncStorage.
-    It loads all saved products that were added from the ScanResultScreen.
-    Users can remove individual items or clear the entire library.
-    It provides a “Go Scan” button that takes users back to the CaloriesPage to scan more items.
-*/
 
 export default function LibraryScreen() {
   const [library, setLibrary] = useState<any[]>([]);

@@ -1,3 +1,17 @@
+/**
+ * ScanResultScreen
+ *
+ * Displays nutrition details for a product passed from the CaloriesPage.
+ * Allows the user to save the item locally (AsyncStorage) as part of a
+ * personal food library, and provides navigation back to the scanner.
+ *
+ * Flow:
+ * - Receives a serialized `product` payload via route params.
+ * - Parses and renders product name, brand, and macro nutrients.
+ * - Offers "Add to Library" to persist the item on-device.
+ * - Includes a "Back to Scan" action to return to the previous screen.
+ */
+
 import React, { useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, Image, Alert,} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -6,20 +20,16 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
-/*  This screen receives the product data from the CaloriesPage.
-    It displays the product’s details and nutrition information in a styled card.
-    The user can save the product to their personal library using AsyncStorage.     
-    When the “Add to Library” button is pressed, the product is stored locally on the device.
-    It also includes a “Back to Scan” button to return to the scanner page.
-*/
-
 export default function ScanResultScreen() {
   const { product } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
 
-  // Decode and parse the product info passed from CaloriesPage
+  /**
+   * Decodes and parses product data from the route parameter.
+   * Returns `null` if parsing fails or no payload is provided.
+   */
   const productData = useMemo(() => {
     try {
       const productStr = Array.isArray(product) ? product[0] : product;
@@ -140,12 +150,17 @@ export default function ScanResultScreen() {
   );
 }
 
-// Safely display numbers or placeholders
+/**
+ * Safely renders a numeric value or a placeholder when not available.
+ * Returns "-" for non-numeric inputs.
+ */
 function safeNum(v: any) {
   return typeof v === "number" ? v : "-";
 }
 
-// Styles
+/**
+ * Style definitions for ScanResultScreen layout and components.
+ */
 const styles = StyleSheet.create({
   safe: {
     flex: 1,

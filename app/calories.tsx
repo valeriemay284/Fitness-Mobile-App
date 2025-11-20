@@ -1,3 +1,12 @@
+/**
+ * CaloriesPage 
+ * 
+ * Lets users track nutrition information by either scanning a barcode
+ * using the device camera or manually entering food details (name, brand, calories, etc).
+ * The scanned or entered data is sent to the ScanResult screen.
+ */
+
+
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Image,} from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,20 +15,28 @@ import { useRouter } from "expo-router";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
-/**
- * CaloriesPage allows users to track nutrition info.
- * They can either scan a barcode using their camera
- * or manually input food details (name, brand, calories, etc.)
- * The scanned or entered data is sent to the ScanResult screen.
- */
 
+/**
+ * CaloriesPage component
+ * 
+ * Responsibilities: 
+ * - Request and manage camera permissions. 
+ * - Toggle between scanner and manual entry modes. 
+ * - Handle barcode scans and fetch prouct data from OpenFoodFacts. 
+ * - Push a product summary to the ScanResult screen. 
+ */
 export default function CaloriesPage() {
   const [permission, requestPermission] = useCameraPermissions();
+
+  // Scanner state
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
+
+  // UI State
   const [loading, setLoading] = useState(false);
   const [manualMode, setManualMode] = useState(false);
 
+// Manual entry fields
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [calories, setCalories] = useState("");
@@ -30,13 +47,26 @@ export default function CaloriesPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  /**
+   * Request camera permissions if not already available.
+   */
   useEffect(() => {
     if (!permission) {
       requestPermission();
     }
   }, [permission]);
 
-  // Barcode scan handling 
+  /**
+   * Handles a successful barcode scan.
+   *
+   * Flow:
+   * 1) Stop scanning and show loading indicator.
+   * 2) Fetch product info from OpenFoodFacts.
+   * 3) If found, build a product object and navigate to ScanResult.
+   * 4) Otherwise, show an alert indicating no product found.
+   *
+   * @param data The decoded barcode value.
+   */
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
@@ -78,7 +108,10 @@ export default function CaloriesPage() {
     }
   };
 
-  // Manual entry handler 
+  /**
+   * Submits manually entered product details to the ScanResult screen.
+   * Validates that a food name is provided; other fields are optional.
+   */
   const onManualSubmit = () => {
     if (!name.trim()) {
       Alert.alert("Missing info", "Please enter at least a food name.");
@@ -254,6 +287,9 @@ export default function CaloriesPage() {
   );
 }
 
+/**
+ * Style definitions for CaloriesPage layout and components. 
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark },
   screen: { flex: 1, backgroundColor: colors.primaryDark },

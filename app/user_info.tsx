@@ -1,4 +1,9 @@
 // @ts-nocheck
+/**
+ * UserInfoScreen
+ * Collects and submits user profile details after registration (name, height, weight, sex, fitness goal).
+ * Persists the user in global auth context on success and routes to /Dashboard
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -19,7 +24,14 @@ import formStyles from "../constants/formStyles";
 
 import { useAuth } from "../components/AuthContext";
 
-// Build options like 4'0" ... 7'11" with a single numeric value (total inches)
+/**
+ * Builds a list of height option ranging from minimum 4 feet to maximum 7 feet.
+ * Returns a single numeric value representing total height in inches to backend
+ * 
+ * @param minFeet The minimum feet value to include
+ * @param maxFeet The maximum feet value to include
+ * @return A list of height options for use in a Picker
+ */
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   const opts = [];
   for (let f = minFeet; f <= maxFeet; f++) {
@@ -30,6 +42,19 @@ const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   return opts;
 };
 
+/**
+ * UserInfoScreen component
+ * 
+ * Handles the following tasks: 
+ * - Collects user details (name, height, weight, sex, fitness goal)
+ * - Validates form inputs
+ * - Sends a POST request to the backend signup API
+ * - Saves the user in global context upon success
+ * - Redirects to the Dashboard screen
+ * 
+ * Includes platform-specific UI adjustments for iOS and Android
+ * 
+ */
 export default function UserInfoScreen() {
   // get id(email) + username passed from Register.tsx
   const { id, username } = useLocalSearchParams();
@@ -328,6 +353,9 @@ export default function UserInfoScreen() {
   );
 }
 
+/**
+ * Style definitions for UserInfoScreen components
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cardBg },
   title: {
@@ -338,8 +366,8 @@ const styles = StyleSheet.create({
     marginVertical: 25,
   },
 
-  block: { gap: 5, marginBottom: 25 },
-
+  block: { gap: 2, marginTop: 10,  marginBottom: 7 },
+  
   labelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   labelIcon: { marginTop: 1 },
   label: {
@@ -351,7 +379,7 @@ const styles = StyleSheet.create({
   // Android + Web dropdown
   dropWrap: { zIndex: 10 },
   dropPicker: {
-    height: Platform.select({ ios: 44, android: 52, web: 44 }),
+    height: Platform.select({ ios: 40, android: 52, web: 44 }),
     color: "#111827",
     width: "100%",
   },

@@ -1,4 +1,15 @@
 // @ts-nocheck
+/**
+ * Dashboard
+ * 
+ * The main landing screen after successful login or registration. 
+ * Displays a set of navigation shortcuts ("tools") for the user, including: 
+ * Profile, Workout, Calories, Settings, and Library.
+ * 
+ * Provides a logout button that clears the authenticated user session
+ * and returns to the login screen
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -10,11 +21,24 @@ import formStyles from "../constants/formStyles";
 
 type RoutePath = "/profile" | "/workout" | "/calories" | "/settings" | "/library";
 
+/**
+ * Dashboard component
+ * 
+ * Functions: 
+ * - Displays app navigation options as buttons in a grid
+ * - Shows a welcoming dashboard header with a mascot image
+ * - Provides a logout button in the top-right corner
+ */
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, clearUser } = useAuth() as any;
 
+
+/**
+ * Menu options for quick navigation.
+ * Each contains a title, icon, and route path.
+ */
   const menuItems: { title: string; icon: any; route: RoutePath }[] = [
     { title: "Profile", icon: "person-circle-outline", route: "/profile" },
     { title: "Workout", icon: "barbell-outline", route: "/workout" },
@@ -23,7 +47,10 @@ export default function Dashboard() {
     { title: "Library", icon: "book-outline", route: "/library" },
   ];
 
-  // Logout logic
+  /**
+   * Handles user logout.
+   * Clears stored authentication data and redirects to the login screen.
+   */
   const handleLogout = async () => {
     try {
       await clearUser();
@@ -83,6 +110,9 @@ export default function Dashboard() {
   );
 }
 
+/**
+ * Style defintions for Dashboard layout and controls.
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark },
   screen: { flexGrow: 1, backgroundColor: colors.primaryDark },

@@ -1,3 +1,17 @@
+/**
+ * ForgotPasswordScreen
+ * 
+ * Allows users to reset their password by verifying their account via email.
+ * The screen alternates between sending a verification code and entering a new password
+ * once the code has been received.
+ * 
+ * Features: 
+ * - Sends a password reset code to the user's registered email
+ * - Displays a reset form after the code is sent. 
+ * - Provides a back link to the login screen. 
+ */
+
+
 import React, { useState } from "react";
 import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import colors from "../constants/colors";
@@ -5,6 +19,14 @@ import SendCodeForm from "../components/SendCodeForm";
 import ResetPasswordForm from "../components/ResetPasswordForm";
 import { router } from "expo-router";
 
+
+/**
+ * ForgotPasswordScreen component
+ * 
+ * Handles both stages of password recovery: 
+ * 1) SendCodeForm - user provides their email to receive a code. 
+ * 2) ResetPasswordForm - user enters the receieved code and creates a new password.
+ */
 export default function ForgotPasswordScreen() {
 
   // State variables
@@ -53,7 +75,9 @@ export default function ForgotPasswordScreen() {
 }
 
 
-// Styles
+/**
+ * Style definitions for the ForgotPasswordScreen layout and components.
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

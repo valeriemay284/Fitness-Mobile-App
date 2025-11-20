@@ -1,5 +1,14 @@
 // @ts-nocheck
 
+/**
+ * RegisterScreen
+ * 
+ * Screen for creating a new account. Collects username, email, password,
+ * and confirm password. Validates inputs, calls the backend to create the
+ * login record, and on success forwards the user to the User Info Screen
+ * to complete their profile.
+ */
+
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -11,18 +20,31 @@ import formStyles from '../constants/formStyles';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
+
+  // Form fields
   const [username, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+
+  // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverMessage, setServerMessage] = useState('');
-  const [isSubmitting, setSubmitting] = useState(false); // 🆕
+  const [isSubmitting, setSubmitting] = useState(false); 
+
   const router = useRouter();
+
+  /** 
+   * Simple email format check
+   * 
+   * @param s Text to test as an email address.
+   * @return True if the string resembles an email address
+   */
 
   const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
 
+  // Validation flags
   const emailOk = isEmail(email.trim());
   const passOk = password.length >= 6;
   const matchOk = password === confirm && confirm.length > 0;
@@ -30,6 +52,15 @@ export default function RegisterScreen() {
 
   const REGISTER_URL = 'http://10.41.218.153:8080/api/createlogin';
 
+  /**
+   * Attempts to register a new account with the provided credentials. 
+   * 
+   * Flow: 
+   * 1) Validate form fields (email, password length, confirmation).
+   * 2) POST credentials to the backend.
+   * 3) If successful, navigate to the User Info screen, taking email and username with. 
+   * 4) Otherwise, display server error message
+   */
   const onSignUp = async () => {
     if (!formValid) return;
     setSubmitting(true);
@@ -54,6 +85,7 @@ export default function RegisterScreen() {
         setServerMessage(data && data.message || 'Registration failed');
         return
       } else {
+        // Registration succeeded: proceed to profile completion
         setServerMessage('User registered successfully!');
         router.replace({
           pathname: "/user_info",
@@ -170,6 +202,9 @@ export default function RegisterScreen() {
   );
 }
 
+/**
+ * Style defintions for the RegisterScreen layout and controls. 
+ */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark },
   screen: { flex: 1, backgroundColor: colors.primaryDark },
