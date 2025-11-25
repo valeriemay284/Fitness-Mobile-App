@@ -153,8 +153,8 @@ export default function UserInfoScreen() {
       console.log("Calling setUser with:", user);
       await setUser(user); 
 
-      console.log("Routing to /Dashboard...");
-      router.replace("/Dashboard");
+      console.log("Routing to /index...");
+      router.replace('/(tabs)/index');
       } catch (err) {
       setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
       console.error("Error:", err);
