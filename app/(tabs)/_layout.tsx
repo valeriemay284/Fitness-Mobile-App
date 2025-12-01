@@ -68,6 +68,17 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Forum tab */}
+      <Tabs.Screen
+        name="Forum"
+        options={{
+          title: "Forum",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbox-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
       {/* Settings tab */}
       <Tabs.Screen
         name="settings"
