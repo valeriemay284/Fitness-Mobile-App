@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import ResetPasswordForm from "../components/ResetPasswordForm";
 import SendCodeForm from "../components/SendCodeForm";
 import colors from "../constants/colors";

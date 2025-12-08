@@ -16,7 +16,7 @@ export default function ResetPasswordForm({ id, setLoading }: ResetPasswordFormP
   const [code, setCode] = useState("");            // Verification code (optional for backend)
   const [newPassword, setNewPassword] = useState(""); // New password input
   const [showPassword, setShowPassword] = useState(false); // Toggle password visibility
-  const BACKEND_URL = "http://10.41.212.239:8080/api";
+  const BACKEND_URL = "http://10.41.81.30:8080/api";
 
   // Function to send new password to backend
   const resetPassword = async () => {
@@ -31,7 +31,7 @@ export default function ResetPasswordForm({ id, setLoading }: ResetPasswordFormP
       const response = await fetch(`${BACKEND_URL}/changePassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, hash: newPassword }), // send password as 'hash'
+        body: JSON.stringify({ id, password: newPassword }), // send password as 'hash'
       });
 
       if (response.ok) {

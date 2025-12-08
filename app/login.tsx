@@ -21,47 +21,67 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://10.41.212.239:8080/api/login';
+  const LOGIN_URL = 'http://10.41.81.30:8080/api/login';
 
-  const onLogin = async() => {
-    if (!isValid || isSubmitting) return; 
-    setSubmitting(true)
-
+  const onLogin = async () => {
+    if (!isValid || isSubmitting) return;
+    setSubmitting(true);
+    setServerMessage(""); // clear previous messages
+  
     try {
-    const response = await fetch(LOGIN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim(), password: password }),
-    });
-
-    let data = {};
-    try { data = await response.json(); } catch {}
-
-    if(!response.ok) {   
-      setServerMessage((data && data.message) || "Login failed. Please check your credentials.");
-      return; 
+      const response = await fetch(LOGIN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password
+        }),
+      });
+  
+      // ALWAYS read as text first to avoid JSON parse errors
+      const text = await response.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch {
+        console.warn("Failed to parse server response as JSON:", text);
+        setServerMessage("Login failed: invalid server response");
+        return;
+      }
+  
+      if (!response.ok) {
+        setServerMessage(data?.message || "Login failed");
+        return;
+      }
+  
+      // Validate backend response before saving
+      if (!data.id || !data.username) {
+        console.error("Backend sent incomplete user:", data);
+        setServerMessage("Login failed: invalid backend response.");
+        return;
+      }
+  
+      const user = {
+        id: String(data.email),
+        name: String(data.name ?? ""),
+        username: String(data.username),
+        height: data.height != null ? Number(data.height) : null,
+        weight: data.weight != null ? Number(data.weight) : null,
+        sex: data.sex ?? null,
+        description: data.description ?? null,
+      };
+  
+      console.log("Setting user:", user);
+      await setUser(user);
+  
+      router.replace("/(tabs)");
+    } catch (err) {
+      console.error("Login error:", err);
+      setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setSubmitting(false);
     }
-
-    setServerMessage("Login successful!");
-
-    const user = {
-      id: String(data.id ?? ""), 
-      name: String(data.name ?? ""),
-      username: String(data.username ?? username.trim()), 
-      height: data.height != null ? Number(data.height) : null,
-      weight: data.weight != null ? Number(data.weight) : null,
-      sex: String(data.sex ?? ''),
-    };
-
-    await setUser(user); 
-    router.replace('/(tabs)'); 
-  } catch (err) {
-    console.error("Login error:", err); 
-    setServerMessage(err instanceof Error ? err.message : 'An unexpected error occurred');
-  } finally {
-    setSubmitting(false); 
-  }
-};
+  };
+  
+  
 
 const onForgot = () => router.push("ForgotPasswordScreen"as any);
 

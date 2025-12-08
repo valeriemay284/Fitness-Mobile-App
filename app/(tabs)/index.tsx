@@ -1,6 +1,15 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router"; // ADDED 12/8
 import React, { useEffect, useRef } from "react";
-import { Animated, Dimensions, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Dimensions,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../components/AuthContext";
 import ProgressRing from "../../components/ProgressRing";
@@ -11,7 +20,8 @@ const { width } = Dimensions.get("window");
 
 export default function HomeDashboard() {
   // get the logged-in user from AuthContext
-  const { user } = useAuth() as any;
+  const { user, signOut } = useAuth() as any; //  signOut added 12/8
+  const router = useRouter(); //  ADDED 12/8
 
   // format today's date as "Friday, November 15"
   const today = new Date().toLocaleDateString("en-US", {
@@ -54,17 +64,30 @@ export default function HomeDashboard() {
         colors={[colors.primaryDark, colors.primary]}
         style={styles.headerGradient}
       >
-        {/* left: greeting and date — right: panda avatar */}
+        {/* left: greeting/date — right: avatar + sign out */}
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.greeting}>Hi, {user?.name || "Friend"} </Text>
             <Text style={styles.date}>{today}</Text>
           </View>
 
-          <Image
-            source={require("../../assets/panda.png")}
-            style={styles.avatar}
-          />
+          <View style={{ alignItems: "center" }}>
+            <Image
+              source={require("../../assets/panda.png")}
+              style={styles.avatar}
+            />
+
+            {/* SIGN OUT BUTTON */}
+            <Pressable
+              onPress={() => {
+                signOut();               // Clear auth
+                router.replace("/login"); // Redirect to login screen
+              }}
+              style={styles.signOutBtn}
+            >
+              <Text style={styles.signOutTxt}>Sign Out</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* animated streak section */}
@@ -120,11 +143,19 @@ export default function HomeDashboard() {
               <Text style={styles.toolText}>Start Workout</Text>
             </Pressable>
 
-            <Pressable style={styles.toolBtn}>
+            {/* GO TO CALORIES */}
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/(tabs)/calories")}
+            >
               <Text style={styles.toolText}>Log Calories</Text>
             </Pressable>
 
-            <Pressable style={styles.toolBtn}>
+            {/* GO TO LIBRARY */}
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/(tabs)/library")}
+            >
               <Text style={styles.toolText}>View Library</Text>
             </Pressable>
           </View>
@@ -154,14 +185,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // greeting text
   greeting: { color: "#fff", fontSize: 26, fontWeight: "800" },
-
-  // date under greeting
   date: { color: "rgba(255,255,255,0.85)", marginTop: 4 },
 
-  // panda image
   avatar: { width: 64, height: 64 },
+
+  // sign out button (small)
+  signOutBtn: {
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 8,
+  },
+  signOutTxt: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
 
   // streak section row layout
   streakRow: {
@@ -171,7 +212,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  // animated pill showing streak
   streakPill: {
     backgroundColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: 14,
@@ -180,21 +220,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  streakNumber: { color: "#fff", fontSize: 18, fontWeight: "800" },
   streakLabel: { color: "rgba(255,255,255,0.9)", fontSize: 12 },
 
-  // right side small stats
   smallStats: { alignItems: "flex-end" },
   smallValue: { color: "#fff", fontWeight: "800" },
   smallLabel: { color: "rgba(255,255,255,0.9)", fontSize: 12 },
 
-  // content section under header
   content: { padding: 20 },
 
-  // ring layout
   ringsRow: { flexDirection: "row", justifyContent: "space-between" },
 
-  // weekly chart card styling
   chartCard: {
     marginTop: 18,
     padding: 14,
@@ -207,7 +242,6 @@ const styles = StyleSheet.create({
 
   cardTitle: { fontWeight: "800", fontSize: 16 },
 
-  // quick tools card
   toolsCard: {
     marginTop: 14,
     padding: 14,
@@ -221,7 +255,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  // button for each quick action
   toolBtn: {
     flex: 1,
     marginHorizontal: 6,

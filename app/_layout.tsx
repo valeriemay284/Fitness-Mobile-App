@@ -1,21 +1,26 @@
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { AuthProvider } from "../components/AuthContext";
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [loaded] = useFonts({
     Poppins: require("../assets/fonts/Poppins-Regular.ttf"),
+    Ionicons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
   });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
 
-  if (!fontsLoaded) return null;
+  if (!loaded) return null;
 
-  // Stack here just manages routing
-  return(
+  return (
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }} />
     </AuthProvider>
