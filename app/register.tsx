@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
+import { api } from '../config';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -50,7 +51,7 @@ export default function RegisterScreen() {
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
-  const REGISTER_URL = 'http://192.168.1.3:8080/api/createlogin';
+  const REGISTER_URL = api('/api/createlogin');
 
   /**
    * Attempts to register a new account with the provided credentials. 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
+import { api } from '../config';
 
 // Props for SendCodeForm
 interface SendCodeFormProps {
@@ -13,7 +14,7 @@ interface SendCodeFormProps {
 
 // Component to send verification code to backend
 export default function SendCodeForm({ id, setId, onCodeSent, setLoading }: SendCodeFormProps) {
-  const BACKEND_URL = "http://192.168.1.213:8080/api"; // Update to your backend IP
+  const BACKEND_URL = api('/api'); // centralized API helper
   const [localLoading, setLocalLoading] = useState(false);
 
   // Send recovery code to backend

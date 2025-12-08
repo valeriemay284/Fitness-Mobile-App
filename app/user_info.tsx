@@ -23,6 +23,7 @@ import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
 import { useAuth } from "../components/AuthContext";
+import { api } from '../config';
 
 /**
  * Builds a list of height option ranging from minimum 4 feet to maximum 7 feet.
@@ -72,7 +73,7 @@ export default function UserInfoScreen() {
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
-  const REGISTER_URL = 'http://10.41.211.252:8080/api/signup';
+  const REGISTER_URL = api('/api/signup');
 
   const onSaveInfo = async () => {
     console.log("onSaveInfo triggered");

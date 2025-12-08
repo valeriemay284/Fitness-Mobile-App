@@ -8,6 +8,7 @@ import { useAuth } from '../components/AuthContext';
 
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
+import { api } from '../config';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -21,13 +22,14 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://192.168.1.3:8080/api/login';
+  const LOGIN_URL = api('/api/login');
 
   const onLogin = async() => {
     if (!isValid || isSubmitting) return; 
     setSubmitting(true)
 
     try {
+    console.log('[Login] POST', LOGIN_URL, { username: username.trim() });
     const response = await fetch(LOGIN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,7 +37,9 @@ export default function LoginScreen() {
     });
 
     let data = {};
-    try { data = await response.json(); } catch {}
+    try { data = await response.json(); } catch (err) { console.log('[Login] failed to parse JSON', err); }
+
+    console.log('[Login] response', response.status, data);
 
     if(!response.ok) {   
       setServerMessage((data && data.message) || "Login failed. Please check your credentials.");
@@ -80,6 +84,12 @@ return (
                 resizeMode="contain"
               />
             </View>
+
+            {serverMessage ? (
+              <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
+                <Text style={{ color: 'red', textAlign: 'center' }}>{serverMessage}</Text>
+              </View>
+            ) : null}
 
             {/* Bottom sheet-style card with rounded TOP corners */}
             <View style={[formStyles.card, { paddingBottom: 20 + insets.bottom }]}>

@@ -2,23 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_BASE } from '../../config'; // centralized API base URL in src/config.ts
 import colors from '../../constants/colors';
 import { Post } from '../../src/types';
+
+
 
 // Forum screen connects to Spring backend for posts.
 // Users can create, delete, like, and share posts.
 // Backend: GET /api/getPosts, POST /api/makePost, POST /api/deletePost?id=<id>
 
-const AVATAR = require('../assets/panda.png');
-const API_URL = 'http://10.40.138.156:8080'; // Change to your backend URL; no trailing slash
+const AVATAR = require('../../assets/panda.png');
+const API_URL = API_BASE; // centralized API base
 
 export default function ForumScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [compose, setCompose] = useState('');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [lastFetchStatus, setLastFetchStatus] = useState<string | null>(null);
   const [lastFetchError, setLastFetchError] = useState<string | null>(null);
@@ -129,7 +131,7 @@ export default function ForumScreen() {
             <Ionicons
               name={likedIds.has(item.id) ? 'heart' : 'heart-outline'}
               size={18}
-              color={likedIds.has(item.id) ? '#E0245E' : colors.textMuted}
+              color={likedIds.has(item.id) ? colors.accent : colors.textMuted}
             />
             <Text style={styles.actionText}>{item.likes ?? 0}</Text>
           </Pressable>
@@ -191,7 +193,6 @@ export default function ForumScreen() {
         };
         setPosts(prev => [createdNorm, ...prev]);
         setCompose('');
-        setIsCreateOpen(false);
         Alert.alert('Success', 'Post created!');
       } else {
         const errBody = await res.text().catch(() => 'Unknown error');
@@ -218,74 +219,21 @@ export default function ForumScreen() {
           placeholderTextColor={colors.textMuted}
         />
         <Pressable
-          style={[styles.postButton, { marginRight: 8 }]}
-          onPress={() => setIsCreateOpen(true)}
-          disabled={isPosting}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Create</Text>
-        </Pressable>
-        <Pressable
           style={styles.postButton}
           onPress={handlePost}
           disabled={isPosting || !compose.trim()}
         >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>
+          <Text style={{ color: colors.cardBg, fontWeight: '700' }}>
             {isPosting ? 'Posting...' : 'Post'}
           </Text>
         </Pressable>
       </View>
 
-      {/* Create Post Modal */}
-      <Modal visible={isCreateOpen} animationType="slide" onRequestClose={() => setIsCreateOpen(false)}>
-        <SafeAreaView
-          style={{ flex: 1, padding: 16, backgroundColor: colors.background }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
-            Create Post
-          </Text>
-          <TextInput
-            value={compose}
-            onChangeText={setCompose}
-            placeholder="Write your post..."
-            multiline
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: '#e6e6e6',
-              borderRadius: 8,
-              padding: 12,
-              backgroundColor: '#fff',
-              marginBottom: 12,
-            }}
-            placeholderTextColor={colors.textMuted}
-          />
-          <View style={{ flexDirection: 'row' }}>
-            <Pressable
-              style={[styles.postButton, { flex: 1, marginRight: 8 }]}
-              onPress={handlePost}
-              disabled={isPosting || !compose.trim()}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700' }}>
-                {isPosting ? 'Posting...' : 'Post'}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.postButton,
-                { backgroundColor: '#ccc', flex: 1 },
-              ]}
-              onPress={() => setIsCreateOpen(false)}
-              disabled={isPosting}
-            >
-              <Text style={{ color: '#111', fontWeight: '700' }}>Cancel</Text>
-            </Pressable>
-          </View>
-        </SafeAreaView>
-      </Modal>
+      
 
       {/* Fetch status panel */}
       {lastFetchStatus && (
-        <View style={{ padding: 8, backgroundColor: '#fff2', alignItems: 'center' }}>
+        <View style={{ padding: 8, backgroundColor: colors.cardBgLight, alignItems: 'center' }}>
           <Text style={{ color: colors.textMuted }}>
             Last fetch: {lastFetchStatus}
           </Text>
@@ -294,7 +242,7 @@ export default function ForumScreen() {
           </Text>
           {lastFetchError ? (
             <View style={{ marginTop: 6, alignItems: 'center' }}>
-              <Text style={{ color: '#b91c1c', fontSize: 11 }}>
+              <Text style={{ color: colors.accent, fontSize: 11 }}>
                 Error: {String(lastFetchError)}
               </Text>
               <Pressable
@@ -306,7 +254,7 @@ export default function ForumScreen() {
                   borderRadius: 6,
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 12 }}>Retry</Text>
+                <Text style={{ color: colors.cardBg, fontSize: 12 }}>Retry</Text>
               </Pressable>
             </View>
           ) : null}
@@ -320,13 +268,7 @@ export default function ForumScreen() {
         renderItem={renderPost}
         contentContainerStyle={{ paddingBottom: 40 }}
         ListEmptyComponent={
-          <Text
-            style={{
-              textAlign: 'center',
-              marginTop: 20,
-              color: colors.textMuted,
-            }}
-          >
+          <Text style={{ textAlign: 'center', marginTop: 20, color: colors.textMuted }}>
             No posts yet
           </Text>
         }
@@ -337,17 +279,17 @@ export default function ForumScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  tweetCard: { flexDirection: 'row', padding: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', backgroundColor: colors.background },
+  tweetCard: { flexDirection: 'row', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.cardBgLight, backgroundColor: colors.background },
   avatar: { width: 52, height: 52, borderRadius: 26, marginRight: 12 },
   tweetBody: { flex: 1 },
   tweetHeader: { flexDirection: 'row', alignItems: 'center' },
   name: { fontWeight: '700', color: colors.primaryDark, marginRight: 8 },
   handle: { color: colors.textMuted, marginLeft: 6 },
-  tweetText: { marginTop: 6, color: '#111827', lineHeight: 20 },
+  tweetText: { marginTop: 6, color: colors.text, lineHeight: 20 },
   tweetActions: { flexDirection: 'row', marginTop: 12, justifyContent: 'space-between', paddingRight: 40 },
   action: { flexDirection: 'row', alignItems: 'center' },
   actionText: { color: colors.textMuted, marginLeft: 8 },
-  composeBox: { flexDirection: 'row', padding: 12, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: colors.cardBg },
-  composeInput: { flex: 1, height: 40, borderRadius: 8, borderWidth: 1, borderColor: '#e6e6e6', paddingHorizontal: 10, backgroundColor: '#fff', marginRight: 8 },
+  composeBox: { flexDirection: 'row', padding: 12, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.cardBgLight, backgroundColor: colors.cardBg },
+  composeInput: { flex: 1, height: 40, borderRadius: 8, borderWidth: 1, borderColor: colors.cardBgLight, paddingHorizontal: 10, backgroundColor: colors.cardBg, marginRight: 8 },
   postButton: { backgroundColor: colors.primaryDark, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
 });
