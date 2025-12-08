@@ -1,4 +1,14 @@
 // @ts-nocheck
+/**
+ * LoginScreen
+ * 
+ * Screen for user authentication. Allows users to log in with a username
+ * and password, displays messages for success or failure, and routes to
+ * the Dashboard screen on successful login.
+ * 
+ * Includes a "Forgot Password" link and a toggle to show or hide the password. 
+ */
+
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,16 +19,32 @@ import { useAuth } from '../components/AuthContext';
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
 
+/**
+ * LoginScreen component: handles user sign-in and navigation after authentication
+ * 
+ * Features: 
+ * - Username and password input fields
+ * - Password visibility toggle
+ * - "Forgot Password" redirection
+ * - Server validation and response handling
+ * - Persistent login using AuthContext
+ * - Navigation to Dashboard upon success
+ */
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { setUser } = useAuth() as any; 
+
+  // Form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [serverMessage, setServerMessage] = useState('');
 
+  // UI feedback
+  const [serverMessage, setServerMessage] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
 
+  // Form validation rule: username not empty, password >= 6 characters
   const isValid = username.trim().length > 0 && password.length >= 6;
 
   const LOGIN_URL = 'http://192.168.1.174:8080/api/login';
@@ -64,6 +90,9 @@ export default function LoginScreen() {
   }
 };
 
+/**
+ * Navigates to the "Forgot Password" screen.
+ */
 const onForgot = () => router.push("ForgotPasswordScreen"as any);
 
 return (

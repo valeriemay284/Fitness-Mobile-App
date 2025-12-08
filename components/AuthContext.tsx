@@ -21,9 +21,9 @@ export function AuthProvider({ children }) {
                     console.log("[AuthContext] loaded user from SecureStore:", raw);
                     setUserState(JSON.parse(raw));
                 } else {
-                    console.log("[AuthContext] no saved user found");
+                    console.log("[AuthContext] no saved user found"); 
                 }
-            } catch (err) {
+            }catch (err) {
                 console.log("[AuthContext] error loaded user:", err);
             } finally {
                 setReady(true);
@@ -32,42 +32,32 @@ export function AuthProvider({ children }) {
         })();
     }, []);
 
-    // FIXED: prevents saving null or invalid/incomplete users
     const setUser = async (u) => {
         console.log("[AuthContext] setUser called with:", u);
-
-        setUserState(u);
-
-        // If user is null OR missing an ID → wipe SecureStore instead of saving bad data
-        if (!u || u.id == null) {
-            console.log("[AuthContext] user is null or invalid, clearing SecureStore");
-            await SecureStore.deleteItemAsync(STORE_KEY);
-            return;
-        }
-
+        setUserState(u); 
         await SecureStore.setItemAsync(STORE_KEY, JSON.stringify(u));
         console.log("[AuthContext] user saved to SecureStore");
     };
 
     const clearUser = async () => {
         console.log("[AuthContext] clearUser called");
-        setUserState(null);
+        setUserState(null); 
         await SecureStore.deleteItemAsync(STORE_KEY);
-        console.log("[AuthContext] User removed from SecureStore");
+        console.log("[AuthContext] User removed from SecureStore")
     };
-
+    
     // passes data to all screens
     const value = useMemo(() => {
-        console.log("[AuthContext] Providing context value:", { user, isReady });
+        console.log("[AuthContext] Providing context value:", { user, isReady }); // ✅ added
         return { user, isReady, setUser, clearUser };
     }, [user, isReady]);
-
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
 
 export function useAuth() {
     const ctx = useContext(AuthContext);
     console.log("[AuthContext] useAuth called, context value:", ctx);
     if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-    return ctx;
+    return ctx; 
 }
