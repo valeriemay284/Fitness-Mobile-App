@@ -72,7 +72,7 @@ export default function UserInfoScreen() {
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
 
-  const REGISTER_URL = 'http://10.41.211.252:8080/api/signup';
+  const REGISTER_URL = 'http://10.41.212.239:8080/api/signup';
 
   const onSaveInfo = async () => {
     console.log("onSaveInfo triggered");
@@ -153,8 +153,8 @@ export default function UserInfoScreen() {
       console.log("Calling setUser with:", user);
       await setUser(user); 
 
-      console.log("Routing to /index...");
-      router.replace('/(tabs)/index');
+      console.log("Routing to /Dashboard...");
+      router.replace('/(tabs)');
       } catch (err) {
       setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
       console.error("Error:", err);
@@ -423,4 +423,3 @@ const styles = StyleSheet.create({
 
   message: { textAlign: "center", marginVertical: 8, color: colors.primaryDark },
 });
-

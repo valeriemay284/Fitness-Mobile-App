@@ -21,7 +21,7 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://10.41.211.252:8080/api/login';
+  const LOGIN_URL = 'http://10.41.212.239:8080/api/login';
 
   const onLogin = async() => {
     if (!isValid || isSubmitting) return; 
