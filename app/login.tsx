@@ -1,13 +1,15 @@
 // @ts-nocheck
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../components/AuthContext';
 
 import colors from '../constants/colors';
 import formStyles from '../constants/formStyles';
+
+export const API_URL = 'http://10.41.14.177:8080/api';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -21,7 +23,7 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = 'http://10.41.81.30:8080/api/login';
+  const LOGIN_URL = 'http://10.41.14.177:8080/api/login';
 
   const onLogin = async () => {
     if (!isValid || isSubmitting) return;
