@@ -1,8 +1,9 @@
 import * as Haptics from "expo-haptics";
 import { Link } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 
 export default function HomeScreen() {
   // Create an animation reference for the panda's lifting motion
@@ -145,3 +146,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#DfDDC5",
   },
 });
+
+
