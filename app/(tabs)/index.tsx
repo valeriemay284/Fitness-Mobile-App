@@ -139,7 +139,10 @@ export default function HomeDashboard() {
           <Text style={styles.cardTitle}>Quick Access</Text>
 
           <View style={styles.toolsRow}>
-            <Pressable style={styles.toolBtn}>
+            <Pressable 
+              style={styles.toolBtn}
+              onPress={() => router.push("/(tabs)/workout")}
+            >
               <Text style={styles.toolText}>Start Workout</Text>
             </Pressable>
 
@@ -149,14 +152,6 @@ export default function HomeDashboard() {
               onPress={() => router.push("/(tabs)/calories")}
             >
               <Text style={styles.toolText}>Log Calories</Text>
-            </Pressable>
-
-            {/* GO TO LIBRARY */}
-            <Pressable
-              style={styles.toolBtn}
-              onPress={() => router.push("/(tabs)/library")}
-            >
-              <Text style={styles.toolText}>View Library</Text>
             </Pressable>
           </View>
         </View>
