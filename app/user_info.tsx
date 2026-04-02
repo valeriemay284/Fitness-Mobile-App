@@ -1,37 +1,26 @@
 // @ts-nocheck
-/**
- * UserInfoScreen
- * Collects and submits user profile details after registration (name, height, weight, sex, fitness goal).
- * Persists the user in global auth context on success and routes to /Dashboard
- */
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
+import * as Progress from 'react-native-progress';
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import colors from "../constants/colors";
-import formStyles from "../constants/formStyles";
-
 import { useAuth } from "../components/AuthContext";
 
-/**
- * Builds a list of height option ranging from minimum 4 feet to maximum 7 feet.
- * Returns a single numeric value representing total height in inches to backend
- * 
- * @param minFeet The minimum feet value to include
- * @param maxFeet The maximum feet value to include
- * @return A list of height options for use in a Picker
- */
+const MOCKUP_GREEN = "#63BC6F"; 
+
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   const opts = [];
   for (let f = minFeet; f <= maxFeet; f++) {
@@ -42,384 +31,316 @@ const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   return opts;
 };
 
-/**
- * UserInfoScreen component
- * 
- * Handles the following tasks: 
- * - Collects user details (name, height, weight, sex, fitness goal)
- * - Validates form inputs
- * - Sends a POST request to the backend signup API
- * - Saves the user in global context upon success
- * - Redirects to the Dashboard screen
- * 
- * Includes platform-specific UI adjustments for iOS and Android
- * 
- */
 export default function UserInfoScreen() {
-  // get id(email) + username passed from Register.tsx
   const { id, username } = useLocalSearchParams();
   const { setUser } = useAuth() as any;
   const router = useRouter(); 
 
-  // keep ONE numeric height value (total inches) for backend
-  const [heightInInches, setHeightInInches] = useState(66); // default 5'6"
+  const [heightInInches, setHeightInInches] = useState(66);
   const [weight, setWeight] = useState("");
+  const [targetWeight, setTargetWeight] = useState(""); 
   const [sex, setSex] = useState("");
-  const [description, setDescription] = useState(""); // NEW!!!!
-  const [name, setName] = useState("")
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [goals, setGoals] = useState(""); 
+  const [activity_Level, setActivityLevel] = useState("sedentary");
+  const [step, setStep] = useState(1);
+
   const [serverMessage, setServerMessage] = useState("");
-  const [isSubmitting, setSubmitting] = useState(false)
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
+  const REGISTER_URL = 'http:/:8080/api/signup';
 
-  const REGISTER_URL = 'http://192.168.1.213:8080/api/signup';
+  const isPage1Valid = name.trim() !== "" && age.trim() !== "" && sex !== "";
+  const isPage2Valid = weight.trim() !== "" && targetWeight.trim() !== "" && activity_Level !== "";
+  const isPage3Valid = goals !== "" && !isSubmitting;
 
   const onSaveInfo = async () => {
-    console.log("onSaveInfo triggered");
+    Keyboard.dismiss();
     setServerMessage("");
-    const w = parseFloat(weight);
-
-    console.log("Form data before submit:", {
-      id,
-      username,
-      heightInInches,
-      weight,
-      parsedWeight: w,
-      sex,
-      description,
-      name,
-    });
-    
-    if (!heightInInches || heightInInches <= 0) {
-      setServerMessage("Please select a valid height.");
-      return;
-    }
-    if (Number.isNaN(w) || w <= 0) {
-      setServerMessage("Please enter a valid weight.");
-      return;
-    }
-    if (!sex) {
-      setServerMessage("Please select male or female.");
-      return;
-    }
-    if (!description) {
-      setServerMessage("Please pick a fitness goal.");
-      return;
-    }
     if (isSubmitting) return; 
     setSubmitting(true);
-    try {
-      console.log("Sending POST request to backend:", REGISTER_URL);
 
+    try {
+      const user = {
+        id: String(id), 
+        username,
+        height: heightInInches,
+        weight: parseFloat(weight),
+        targetWeight: parseFloat(targetWeight),
+        sex,
+        goals,
+        name,
+        age: parseInt(age),
+        activity_Level
+      };
       const response = await fetch(REGISTER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: String(id), 
-          username,
-          height: heightInInches, // single variable
-          weight: w,
-          sex,
-          description, // NEW
-          name, 
-        })
+        body: JSON.stringify(user)
       });
-
-      console.log("Response status:", response.status);
-
-      let data = {};
-      try { data = await response.json(); } catch {}
-
       if (!response.ok) {
-        setServerMessage(( data && data.message) || "User info failed to save");
-        console.log("Response not OK:", data);
+        setServerMessage("User info failed to save");
         return; 
       } 
-        
-      setServerMessage("User info saved");
-      console.log("User info saved successfully!");
-
-      // save user globally for logged-in session
-      const user = {
-        id: String(id), 
-        username: String(username ?? ""),
-        height: heightInInches, 
-        weight: w, 
-        sex, 
-        description, 
-        name,
-      };
-
-      console.log("Calling setUser with:", user);
       await setUser(user); 
-
-      console.log("Routing to /Dashboard...");
-      router.replace('/(tabs)');
-      } catch (err) {
-      setServerMessage(err instanceof Error ? err.message : "An unexpected error occurred");
-      console.error("Error:", err);
+      router.replace("/(tabs)");
+    } catch (err) {
+      setServerMessage(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isValid =
-    heightInInches > 0 &&
-    weight.trim() !== "" &&
-    parseFloat(weight) > 0 &&
-    (sex === "male" || sex === "female") &&
-    description !== "" &&
-    !isSubmitting;
-
-  // fitness goals chips
-  const goals = [
-    { label: "Lose Weight", value: "lose_weight", icon: "flame-outline" },
-    { label: "Build Muscle", value: "build_muscle", icon: "barbell-outline" },
-    { label: "Stay Healthy", value: "stay_healthy", icon: "leaf-outline" },
-    { label: "Endurance", value: "endurance", icon: "bicycle-outline" },
-  ];
-
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={{ flex: 1, padding: 16 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View>
-          <Text style={styles.title}>Let's personalize your experience!</Text>
-        </View>
-
-        {/* Name */}
-        <View style={styles.block}>
-          <View style={styles.labelRow}>
-            <Ionicons name="barbell-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
-            <Text style={styles.label}>Your Name</Text>
-          </View>
-
-          <View style={formStyles.inputWrap}>
-            <Ionicons name="barbell-outline" size={18} style={styles.inputIcon} />
-            <TextInput
-              style={formStyles.input}
-              placeholder="Name"
-              placeholderTextColor={colors.textMuted}
-              value={name}
-              onChangeText={setName}
-              returnKeyType="done"
-            />
-          </View>
-        </View>
-
-
-        {/* Height */}
-        <View style={styles.block}>
-          <View style={styles.labelRow}>
-            <Ionicons name="resize-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
-            <Text style={styles.label}>Height</Text>
-          </View>
-
-          {Platform.OS === "ios" ? (
-            // iOS wheel picker (needs vertical room to scroll)
-            <View style={styles.pickerIOSWrap} pointerEvents="auto">
-              <Picker
-                selectedValue={heightInInches}
-                onValueChange={(v) => setHeightInInches(v)}
-                itemStyle={styles.pickerIOSItem}
-              >
-                {heightOptions.map((opt) => (
-                  <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-                ))}
-              </Picker>
-            </View>
-          ) : (
-            // Android + Web: compact dropdown
-            <View style={[formStyles.inputWrap, styles.dropWrap]}>
-              <Ionicons name="resize-outline" size={18} style={styles.inputIcon} />
-              <Picker
-                selectedValue={heightInInches}
-                onValueChange={(v) => setHeightInInches(v)}
-                style={styles.dropPicker}
-                dropdownIconColor={colors.primaryDark}
-              >
-                {heightOptions.map((opt) => (
-                  <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-                ))}
-              </Picker>
-            </View>
-          )}
-        </View>
-
-        {/* Weight */}
-        <View style={styles.block}>
-          <View style={styles.labelRow}>
-            <Ionicons name="barbell-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
-            <Text style={styles.label}>Weight</Text>
-          </View>
-
-          <View style={formStyles.inputWrap}>
-            <Ionicons name="barbell-outline" size={18} style={styles.inputIcon} />
-            <TextInput
-              style={formStyles.input}
-              placeholder="e.g. 135 (lbs)"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-              value={weight}
-              onChangeText={(t) => setWeight(t.replace(/[^0-9.]/g, ""))}
-              returnKeyType="done"
-            />
-          </View>
-        </View>
-
-        {/* Sex */}
-        <View style={styles.block}>
-          <View style={styles.labelRow}>
-            <Ionicons name="person-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
-            <Text style={styles.label}>Sex</Text>
-          </View>
-
-          {Platform.OS === "ios" ? (
-            <View style={styles.pickerIOSWrap} pointerEvents="auto">
-              <Picker
-                selectedValue={sex}
-                onValueChange={(v) => setSex(v)}
-                itemStyle={styles.pickerIOSItem}
-              >
-                <Picker.Item label="Select..." value="" />
-                <Picker.Item label="Male" value="male" />
-                <Picker.Item label="Female" value="female" />
-              </Picker>
-            </View>
-          ) : (
-            <View style={[formStyles.inputWrap, styles.dropWrap]}>
-              <Ionicons name="person-outline" size={18} style={styles.inputIcon} />
-              <Picker
-                selectedValue={sex}
-                onValueChange={(v) => setSex(v)}
-                style={styles.dropPicker}
-                dropdownIconColor={colors.primaryDark}
-              >
-                <Picker.Item label="Select..." value="" />
-                <Picker.Item label="Male" value="male" />
-                <Picker.Item label="Female" value="female" />
-              </Picker>
-            </View>
-          )}
-        </View>
-
-        {/* Fitness goals (chips) */}
-        <View style={styles.block}>
-          <View style={styles.labelRow}>
-            <Ionicons name="flag-outline" size={18} color={colors.primaryDark} style={styles.labelIcon} />
-            <Text style={styles.label}>What is your fitness goal?</Text>
-          </View>
-
-          <View style={styles.goalWrap}>
-            {goals.map((g) => {
-              const active = description === g.value;
-              return (
-                <Pressable
-                  key={g.value}
-                  onPress={() => setDescription(g.value)}
-                  style={[styles.goalChip, active && styles.goalChipActive]}
-                >
-                  <Ionicons
-                    name={g.icon}
-                    size={16}
-                    color={active ? "#fff" : colors.primaryDark}
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={[styles.goalText, active && { color: "#fff" }]}>{g.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {serverMessage ? <Text style={styles.message}>{serverMessage}</Text> : null}
-
-        {/* Confirm button */}
-        <Pressable
-          onPress={onSaveInfo}
-          disabled={!isValid}
-          style={({ pressed }) => [
-            formStyles.button,
-            !isValid && formStyles.buttonDisabled,
-            pressed && { transform: [{ scale: 0.995 }] },
-          ]}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Text style={formStyles.buttonText}>Confirm</Text>
-        </Pressable>
-      </KeyboardAvoidingView>
+          {/* Progress Header */}
+          <View style={styles.headerContainer}>
+              <View style={styles.headerRow}>
+                <Pressable onPress={() => step > 1 && setStep(step - 1)} style={{ width: 30 }}>
+                    {step > 1 && <Ionicons name="chevron-back" size={24} color="#1A261D" />}
+                </Pressable>
+                <View style={styles.progressWrapper}>
+                    <Progress.Bar
+                      progress={step / 3}
+                      width={null}
+                      color={MOCKUP_GREEN}
+                      unfilledColor='#E3E6EB'
+                      borderWidth={0}
+                      height={8}
+                      borderRadius={4}
+                    />
+                </View>
+                <Text style={styles.stepText}>{step}/3</Text>
+              </View>
+          </View>
+
+          <View style={styles.contentBody}>
+            {step === 1 && (
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Tell us about{"\n"}yourself!</Text>
+                
+                <View style={styles.inputCard}>
+                  <Text style={styles.cardLabel}>Name</Text>
+                  <TextInput
+                      style={styles.cardInput}
+                      placeholder="Enter name"
+                      placeholderTextColor="#BDC3C7"
+                      value={name}
+                      onChangeText={setName}
+                      returnKeyType="done"
+                  />
+                </View>
+
+                <View style={styles.inputCard}>
+                  <Text style={styles.cardLabel}>Age</Text>
+                  <TextInput
+                      style={styles.cardInput}
+                      placeholder="25"
+                      placeholderTextColor="#BDC3C7"
+                      keyboardType="number-pad"
+                      value={age}
+                      onChangeText={setAge}
+                      returnKeyType="done"
+                  />
+                </View>
+
+                <View style={styles.wheelBlock}>
+                  <Text style={styles.cardLabel}>Biological Sex</Text>
+                  <View style={styles.wheelContainer}>
+                    <Picker
+                      selectedValue={sex}
+                      onValueChange={(v) => { Keyboard.dismiss(); setSex(v); }}
+                      itemStyle={styles.pickerItem}
+                    >
+                      <Picker.Item label="Select..." value="" />
+                      <Picker.Item label="Male" value="male" />
+                      <Picker.Item label="Female" value="female" />
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  onPress={() => { Keyboard.dismiss(); setStep(2); }}
+                  disabled={!isPage1Valid}
+                  style={[styles.primaryButton, !isPage1Valid && styles.buttonDisabled]}
+                >
+                  <Text style={styles.buttonText}>Continue</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {step === 2 && (
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Nice to meet you, {name}!</Text>
+                <Text style={styles.subtitle}>Help me personalize your experience</Text>
+
+                <View style={styles.wheelBlock}>
+                  <Text style={styles.cardLabel}>Height</Text>
+                  <View style={styles.wheelContainer}>
+                    <Picker
+                      selectedValue={heightInInches}
+                      onValueChange={(v) => { Keyboard.dismiss(); setHeightInInches(v); }}
+                      itemStyle={styles.pickerItem}
+                    >
+                      {heightOptions.map((opt) => (
+                        <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={styles.inputCard}>
+                  <Text style={styles.cardLabel}>Current Weight</Text>
+                  <TextInput
+                      style={styles.cardInput}
+                      placeholder="lbs"
+                      placeholderTextColor="#BDC3C7"
+                      keyboardType="decimal-pad"
+                      value={weight}
+                      onChangeText={(t) => setWeight(t.replace(/[^0-9.]/g, ""))}
+                  />
+                </View>
+
+                <View style={styles.inputCard}>
+                  <View>
+                    <Text style={styles.cardLabel}>Goal Weight</Text>
+                    <Pressable onPress={() => { Keyboard.dismiss(); setTargetWeight(weight); }}>
+                      <Text style={styles.maintainLabel}>
+                        {weight && targetWeight === weight ? "✓ Maintaining!" : "I'm staying here"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <TextInput
+                      style={styles.cardInput}
+                      placeholder="lbs"
+                      placeholderTextColor="#BDC3C7"
+                      keyboardType="decimal-pad"
+                      value={targetWeight}
+                      onChangeText={(t) => setTargetWeight(t.replace(/[^0-9.]/g, ""))}
+                  />
+                </View>
+
+                <Text style={styles.sectionTitle}>How much do you move?</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activityScroll}>
+                  {[
+                    { id: 'sedentary', label: 'Sedentary', sub: 'Little exercise', icon: 'bed-outline' },
+                    { id: 'lightly', label: 'Lightly', sub: '1-2 days / wk', icon: 'walk-outline' },
+                    { id: 'moderate', label: 'Moderate', sub: '3-5 days / wk', icon: 'fitness-outline' },
+                    { id: 'active', label: 'Active', sub: '6-7 days / wk', icon: 'bicycle-outline' },
+                  ].map((lvl) => (
+                    <Pressable
+                      key={lvl.id}
+                      onPress={() => { Keyboard.dismiss(); setActivityLevel(lvl.id); }}
+                      style={[styles.levelCard, activity_Level === lvl.id && styles.levelCardActive]}
+                    >
+                      <Ionicons name={lvl.icon} size={26} color={activity_Level === lvl.id ? "#fff" : "#1A261D"} />
+                      <Text style={[styles.levelCardText, activity_Level === lvl.id && { color: '#fff' }]}>{lvl.label}</Text>
+                      <Text style={[styles.levelCardSub, activity_Level === lvl.id && { color: 'rgba(255,255,255,0.8)' }]}>{lvl.sub}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  onPress={() => { Keyboard.dismiss(); setStep(3); }}
+                  disabled={!isPage2Valid}
+                  style={[styles.primaryButton, !isPage2Valid && styles.buttonDisabled]}
+                >
+                  <Text style={styles.buttonText}>Almost there</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {step === 3 && (
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>The final step!</Text>
+                <Text style={styles.subtitle}>What should we focus on first?</Text>
+
+                <View style={styles.goalWrap}>
+                  {[
+                    { label: "Lose Weight", value: "lose_weight", icon: "flame-outline", desc: "Burn fat and get leaner" },
+                    { label: "Build Muscle", value: "build_muscle", icon: "barbell-outline", desc: "Gain strength and mass" },
+                    { label: "Improve Endurance", value: "endurance", icon: "heart-outline", desc: "Boost your stamina and energy" }, // NEW
+                    { label: "Stay Healthy", value: "stay_healthy", icon: "leaf-outline", desc: "Maintain energy and health" },
+                  ].map((g) => (
+                    <Pressable
+                      key={g.value}
+                      onPress={() => { Keyboard.dismiss(); setGoals(g.value); }}
+                      style={[styles.goalChip, goals === g.value && styles.goalChipActive]}
+                    >
+                      <Ionicons name={g.icon} size={28} color={goals === g.value ? "#fff" : "#1A261D"} style={{ marginRight: 15 }} />
+                      <View>
+                          <Text style={[styles.goalText, goals === g.value && { color: "#fff" }]}>{g.label}</Text>
+                          <Text style={[styles.goalDesc, goals === g.value && { color: "#E3E6EB" }]}>{g.desc}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {serverMessage ? <Text style={styles.message}>{serverMessage}</Text> : null}
+
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  onPress={onSaveInfo}
+                  disabled={!isPage3Valid}
+                  style={[styles.primaryButton, !isPage3Valid && styles.buttonDisabled, { marginBottom: 40 }]}
+                >
+                  <Text style={styles.buttonText}>{isSubmitting ? "Saving..." : "Finish"}</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
 
-/**
- * Style definitions for UserInfoScreen components
- */
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.cardBg },
-  title: {
-    color: colors.primaryDark,
-    fontSize: 20,
-    fontWeight: "800",
-    textAlign: "center",
-    marginVertical: 25,
+  safe: { flex: 1, backgroundColor: '#F2F5F3' },
+  headerContainer: { paddingHorizontal: 20, paddingTop: 10 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  progressWrapper: { flex: 1, marginHorizontal: 20 },
+  stepText: { fontSize: 14, fontWeight: '700', color: '#1A261D', opacity: 0.5 },
+  contentBody: { flex: 1, paddingHorizontal: 25 },
+  title: { fontSize: 30, fontWeight: '800', color: '#1A261D', marginTop: 25, marginBottom:10 },
+  subtitle: { fontSize: 16, color: '#7F8C8D', marginBottom: 15, fontWeight: '500' },
+  inputCard: { 
+    backgroundColor: 'white', borderRadius: 18, paddingHorizontal: 20, paddingVertical: 18, marginBottom: 15, 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, 
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: {width:0, height:4} 
   },
-
-  block: { gap: 2, marginTop: 10,  marginBottom: 7 },
-  
-  labelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  labelIcon: { marginTop: 1 },
-  label: {
-    color: colors.primaryDark,
-    fontWeight: "700",
-    fontSize: 16,
+  cardLabel: { fontSize: 16, fontWeight: '700', color: '#1A261D' },
+  maintainLabel: { fontSize: 12, color: MOCKUP_GREEN, fontWeight: '800', marginTop: 4 },
+  cardInput: { textAlign: 'right', fontWeight: '600', color: MOCKUP_GREEN, fontSize: 16, flex: 1, marginLeft: 10 },
+  wheelBlock: { marginBottom: 20 },
+  wheelContainer: { backgroundColor: 'white', borderRadius: 24, marginTop: 10, height: 90, justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#E8E8E8' },
+  pickerItem: { fontSize: 18, color: '#1A261D' },
+  sectionTitle: { fontWeight: '800', fontSize: 18, color: '#1A261D', marginTop: 10, marginBottom: 15 },
+  activityScroll: { gap: 12, paddingRight: 20 },
+  levelCard: { width: 130, height: 115, backgroundColor: '#fff', borderRadius: 20, alignItems: 'center', justifyContent: 'center', padding: 10, borderWidth: 1, borderColor: '#E8E8E8' },
+  levelCardActive: { backgroundColor: MOCKUP_GREEN, borderColor: MOCKUP_GREEN },
+  levelCardText: { marginTop: 8, fontSize: 14, fontWeight: '800', textAlign: 'center', color: '#1A261D' },
+  levelCardSub: { marginTop: 2, fontSize: 11, fontWeight: '500', textAlign: 'center', color: '#95A5A6' },
+  goalWrap: { gap: 15 },
+  goalChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#E8E8E8', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18 },
+  goalChipActive: { backgroundColor: MOCKUP_GREEN, borderColor: MOCKUP_GREEN },
+  goalText: { fontSize: 18, fontWeight: "700", color: "#1A261D" },
+  goalDesc: { fontSize: 13, color: "#95A5A6", marginTop: 2 },
+  primaryButton: { 
+    backgroundColor: MOCKUP_GREEN, paddingVertical: 20, borderRadius: 22, alignItems: 'center', 
+    shadowColor: MOCKUP_GREEN, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: {width:0, height:5},
+    marginBottom: 20
   },
-
-  // Android + Web dropdown
-  dropWrap: { zIndex: 10 },
-  dropPicker: {
-    height: Platform.select({ ios: 40, android: 52, web: 44 }),
-    color: "#111827",
-    width: "100%",
-  },
-
-  // iOS wheel container
-  pickerIOSWrap: {
-    borderWidth: 1,
-    borderColor: "#E3E6EB",
-    backgroundColor: "#FDFDFE",
-    borderRadius: 14,
-    overflow: "hidden",
-    height: 100,
-    justifyContent: "center",
-  },
-  pickerIOSItem: { color: colors.primaryDark, fontSize: 18 },
-
-  // Icons inside inputWrap rows
-  inputIcon: { position: "absolute", left: 14, top: 16, opacity: 0.8 },
-
-  // Fitness goals chips
-  goalWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 15,
-  },
-  goalChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.primaryDark,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 15,
-    backgroundColor: colors.cardBg,
-  },
-  goalChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  goalText: { fontSize: 14, color: colors.primaryDark, fontWeight: "600" },
-
-  message: { textAlign: "center", marginVertical: 8, color: colors.primaryDark },
+  buttonDisabled: { opacity: 0.5, backgroundColor: '#BDC3C7', shadowOpacity: 0 },
+  buttonText: { color: 'white', fontWeight: '800', fontSize: 18 },
+  message: { color: '#EF4444', textAlign: 'center', marginTop: 10, fontWeight: '600' }
 });
