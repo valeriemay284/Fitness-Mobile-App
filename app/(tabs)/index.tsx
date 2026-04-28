@@ -1,6 +1,35 @@
+/**
+ * Module: Home Dashboard
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Shows the main dashboard for authenticated users, including streak data,
+ *   progress rings, weekly activity chart, and quick navigation actions.
+ *
+ * Important data structures:
+ *   - today: formatted current date string
+ *   - streakAnim: animated value driving the dashboard motion
+ *
+ * Algorithm note:
+ *   The screen uses a looping animation and an interpolated transform to make
+ *   the streak pill feel lively without complex state updates.
+ */
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
+<<<<<<< Updated upstream
 import { Animated, Dimensions, Image, Pressable, StyleSheet, Text, View } from "react-native";
+=======
+import {
+    Animated,
+    Dimensions,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+>>>>>>> Stashed changes
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../components/AuthContext";
 import ProgressRing from "../../components/ProgressRing";

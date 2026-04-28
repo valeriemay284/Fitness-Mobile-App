@@ -1,3 +1,22 @@
+/**
+ * Module: Forgot Password Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Manages the password recovery flow by allowing users to request a
+ *   verification code and then reset their password. It delegates the
+ *   send-code and reset actions to child form components.
+ *
+ * Important data structures:
+ *   - id: user identifier or email
+ *   - codeSent: flow state controlling which step to render
+ *   - loading: whether a backend request is active
+ *
+ * Algorithm note:
+ *   A two-step wizard pattern is used so the user can first request a code and
+ *   then reset the password without leaving the screen.
+ */
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";

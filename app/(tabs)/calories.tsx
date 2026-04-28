@@ -1,3 +1,18 @@
+<<<<<<< Updated upstream
+=======
+/**
+ * CaloriesPage allows users to track nutrition info.
+ * They can either scan a barcode using their camera
+ * or manually input food details (name, brand, calories, etc.)
+ * The scanned or entered data is sent to the ScanResult screen.
+ *
+ * 
+ * Users can view their stored BMR/TDEE from the backend
+ * by entering their username.
+ */
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+>>>>>>> Stashed changes
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -6,12 +21,16 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import colors from "../../constants/colors";
 import formStyles from "../../constants/formStyles";
 
+<<<<<<< Updated upstream
 /**
  * CaloriesPage allows users to track nutrition info.
  * They can either scan a barcode using their camera
  * or manually input food details (name, brand, calories, etc.)
  * The scanned or entered data is sent to the ScanResult screen.
  */
+=======
+
+>>>>>>> Stashed changes
 
 export default function CaloriesPage() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -100,7 +119,86 @@ export default function CaloriesPage() {
     });
   };
 
+<<<<<<< Updated upstream
   // Permission states 
+=======
+  // Demo: Fetch BMR/TDEE from backend
+  const fetchCaloriesInfo = async () => {
+    if (!username.trim()) {
+      Alert.alert("Missing info", "Please enter your username.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setLoadingMessage("Fetching your calorie targets...");
+
+      const response = await fetch(
+        `http://10.40.138.212:8080/api/getCaloriesInfo?username=${username}`
+      );
+      const data = await response.json();
+      setLoading(false);
+
+      if (!response.ok) {
+        Alert.alert("Not found", "No calorie data found for this user.");
+        return;
+      }
+
+      setBmr(Math.round(data.bmr));
+      setTdee(Math.round(data.tdee));
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("Server Error", "Could not connect to backend.");
+    }
+  };
+
+  const renderTab = (label: string, value: Mode) => {
+    const active = mode === value;
+
+    return (
+      <Pressable
+        onPress={() => {
+          setMode(value);
+
+          //  open scanner when Scan tab is pressed
+          if (value === "scan") {
+            setScanned(false);
+            setScanning(true);
+          } else {
+            setScanning(false);
+          }
+
+          //  refresh library when Library tab opens
+          if (value === "library") {
+            loadFoods();
+          }
+        }}
+        style={[
+          styles.tabButton,
+          {
+            backgroundColor: active ? colors.primaryDark : colors.background,
+            borderColor: colors.primaryDark,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            { color: active ? "#fff" : colors.primaryDark },
+          ]}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  //  safe number display helper
+  const safeNum = (v: any) => {
+    return typeof v === "number" ? v : "-";
+  };
+
+>>>>>>> Stashed changes
   if (!permission) return <Text>Requesting camera permission...</Text>;
 
   if (!permission.granted) {

@@ -1,3 +1,20 @@
+/**
+ * Module: Send Code Form
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Renders the first step in password recovery, allowing the user to enter
+ *   their email/ID and request a verification code from the backend.
+ *
+ * Important data structures:
+ *   - id: user email/identifier for code request
+ *   - localLoading: component-level loading state
+ *
+ * Algorithm note:
+ *   The form notifies the parent when the code is sent so the wizard can move
+ *   to the reset-password step.
+ */
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import colors from "../constants/colors";

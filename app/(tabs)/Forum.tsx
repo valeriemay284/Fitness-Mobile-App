@@ -1,3 +1,21 @@
+/**
+ * Module: Forum Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Displays a social feed where users can load, post, like, delete, and share
+ *   forum entries. It communicates with a Spring backend via REST endpoints.
+ *
+ * Important data structures:
+ *   - posts: array of forum post objects
+ *   - likedIds: local Set tracking currently liked posts
+ *   - lastFetchStatus/error: fetch diagnostics for network operations
+ *
+ * Algorithm note:
+ *   The component normalizes backend post payloads and uses local state
+ *   toggles for likes to provide immediate UI feedback without backend latency.
+ */
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';

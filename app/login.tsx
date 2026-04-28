@@ -1,3 +1,20 @@
+/**
+ * Module: Login Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Renders the login form, validates credentials locally, and authenticates
+ *   against the backend. On success, the user profile is stored in AuthContext.
+ *
+ * Important data structures:
+ *   - username/password: local form state
+ *   - serverMessage: backend or validation feedback message
+ *
+ * Algorithm note:
+ *   Login uses defensive response parsing: response text is read first and
+ *   then parsed as JSON only when safe, preventing malformed backend errors.
+ */
 // @ts-nocheck
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
@@ -22,12 +39,26 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
+<<<<<<< Updated upstream
   const LOGIN_URL = api('/api/login');
 
   const onLogin = async() => {
     if (!isValid || isSubmitting) return; 
     setSubmitting(true)
 
+=======
+  const LOGIN_URL = 'http://10.40.137.2:8080/api/login';
+
+  /**
+   * Authenticate the user with the backend using provided credentials.
+   * Reads the response as text first, then parses JSON safely.
+   */
+  const onLogin = async () => {
+    if (!isValid || isSubmitting) return;
+    setSubmitting(true);
+    setServerMessage(""); // clear previous messages
+  
+>>>>>>> Stashed changes
     try {
     console.log('[Login] POST', LOGIN_URL, { username: username.trim() });
     const response = await fetch(LOGIN_URL, {

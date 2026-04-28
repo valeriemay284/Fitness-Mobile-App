@@ -1,17 +1,28 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, Image, Alert,} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+/**
+ * Module: Scan Result Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Displays nutrition details for a scanned or manually entered food item.
+ *   Allows the user to save the item to local storage and navigate back to the
+ *   scanner.
+ *
+ * Important data structures:
+ *   - productData: parsed product metadata used for display
+ *   - saving: local state to prevent duplicate save operations
+ *
+ * Algorithm note:
+ *   Product details are parsed from URL parameters and stored in local
+ *   AsyncStorage, which preserves the user's library across app restarts.
+ */
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
-
-/*  This screen receives the product data from the CaloriesPage.
-    It displays the product’s details and nutrition information in a styled card.
-    The user can save the product to their personal library using AsyncStorage.     
-    When the “Add to Library” button is pressed, the product is stored locally on the device.
-    It also includes a “Back to Scan” button to return to the scanner page.
-*/
 
 export default function ScanResultScreen() {
   const { product } = useLocalSearchParams();
@@ -140,7 +151,11 @@ export default function ScanResultScreen() {
   );
 }
 
-// Safely display numbers or placeholders
+/**
+ * Format numeric nutrition values safely for display.
+ * @param v Value to display.
+ * @returns The numeric value or a placeholder when invalid.
+ */
 function safeNum(v: any) {
   return typeof v === "number" ? v : "-";
 }

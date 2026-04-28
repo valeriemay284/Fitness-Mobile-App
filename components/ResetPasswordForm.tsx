@@ -1,3 +1,20 @@
+/**
+ * Module: Reset Password Form
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Provides a form where the user can enter a verification code and new
+ *   password, then submit the reset request to the backend.
+ *
+ * Important data structures:
+ *   - id: user email or identifier
+ *   - newPassword: new password text value
+ *
+ * Algorithm note:
+ *   This component keeps the reset flow simple by sending only the required
+ *   id and password values to the backend and using alerts for user feedback.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";

@@ -1,3 +1,23 @@
+/**
+ * Module: User Info Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Collects profile information after registration, including personal
+ *   details, physical stats, activity level, and fitness goals. It supports a
+ *   multi-step form that saves the completed user profile to AuthContext.
+ *
+ * Important data structures:
+ *   - heightOptions: selectable height values in inches
+ *   - step: current form step (1-3)
+ *   - user: assembled user profile object for backend submission
+ *
+ * Algorithm note:
+ *   The form uses progressive disclosure with a step counter and validates each
+ *   page before allowing navigation forward, improving user focus and reducing
+ *   form errors.
+ */
 // @ts-nocheck
 /**
  * UserInfoScreen
@@ -9,6 +29,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+<<<<<<< Updated upstream
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,6 +37,18 @@ import {
   Text,
   TextInput,
   View,
+=======
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableWithoutFeedback,
+    View,
+>>>>>>> Stashed changes
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,6 +58,7 @@ import formStyles from "../constants/formStyles";
 import { useAuth } from "../components/AuthContext";
 import { api } from '../config';
 
+<<<<<<< Updated upstream
 /**
  * Builds a list of height option ranging from minimum 4 feet to maximum 7 feet.
  * Returns a single numeric value representing total height in inches to backend
@@ -32,6 +66,15 @@ import { api } from '../config';
  * @param minFeet The minimum feet value to include
  * @param maxFeet The maximum feet value to include
  * @return A list of height options for use in a Picker
+=======
+const MOCKUP_GREEN = "#63BC6F"; 
+
+/**
+ * Build an array of height options for a picker component.
+ * @param minFeet Minimum feet value.
+ * @param maxFeet Maximum feet value.
+ * @returns Array of height options with label and numeric inch value.
+>>>>>>> Stashed changes
  */
 const buildHeightOptions = (minFeet = 4, maxFeet = 7) => {
   const opts = [];
@@ -75,6 +118,10 @@ export default function UserInfoScreen() {
 
   const REGISTER_URL = api('/api/signup');
 
+  /**
+   * Submit completed user profile information to the backend and
+   * persist the returned profile in AuthContext.
+   */
   const onSaveInfo = async () => {
     console.log("onSaveInfo triggered");
     setServerMessage("");
@@ -376,6 +423,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
   },
+<<<<<<< Updated upstream
 
   // Android + Web dropdown
   dropWrap: { zIndex: 10 },
@@ -425,3 +473,9 @@ const styles = StyleSheet.create({
   message: { textAlign: "center", marginVertical: 8, color: colors.primaryDark },
 });
 
+=======
+  buttonDisabled: { opacity: 0.5, backgroundColor: '#BDC3C7', shadowOpacity: 0 },
+  buttonText: { color: 'white', fontWeight: '800', fontSize: 18 },
+  message: { color: '#EF4444', textAlign: 'center', marginTop: 10, fontWeight: '600' }
+});
+>>>>>>> Stashed changes

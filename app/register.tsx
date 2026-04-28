@@ -1,13 +1,23 @@
+/**
+ * Module: Register Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Provides account creation for new users. Validates username, email, and
+ *   password strength before sending registration data to the backend.
+ *   On success, navigates the user to the profile completion flow.
+ *
+ * Important data structures:
+ *   - username/email/password/confirm: registration form state
+ *   - pwErrors: array of password validation failures
+ *
+ * Algorithm note:
+ *   The registration flow performs client-side password composition checks
+ *   so the user receives immediate feedback before the backend call.
+ */
 // @ts-nocheck
 
-/**
- * RegisterScreen
- * 
- * Screen for creating a new account. Collects username, email, password,
- * and confirm password. Validates inputs, calls the backend to create the
- * login record, and on success forwards the user to the User Info Screen
- * to complete their profile.
- */
 
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
@@ -36,6 +46,7 @@ export default function RegisterScreen() {
 
   const router = useRouter();
 
+<<<<<<< Updated upstream
   /** 
    * Simple email format check
    * 
@@ -43,6 +54,13 @@ export default function RegisterScreen() {
    * @return True if the string resembles an email address
    */
 
+=======
+  /**
+   * Simple email validator used by the registration form.
+   * @param s Input string to check.
+   * @returns True when the string matches a basic email pattern.
+   */
+>>>>>>> Stashed changes
   const isEmail = (s) => /.+@.+\..+/.test(String(s).toLowerCase());
 
   // Validation flags
@@ -51,6 +69,7 @@ export default function RegisterScreen() {
   const matchOk = password === confirm && confirm.length > 0;
   const formValid = emailOk && passOk && matchOk;
 
+<<<<<<< Updated upstream
   const REGISTER_URL = api('/api/createlogin');
 
   /**
@@ -61,6 +80,31 @@ export default function RegisterScreen() {
    * 2) POST credentials to the backend.
    * 3) If successful, navigate to the User Info screen, taking email and username with. 
    * 4) Otherwise, display server error message
+=======
+  const specials = `!@#$%^&*()_+-=[]{};':"\\|,.<>/?`;
+
+  for (let char of password) {
+    if (char >= 'A' && char <= 'Z') hasUppercase = true;
+    if (!isNaN(char)) hasNumber = true;
+    if (specials.includes(char)) hasSpecial = true;
+  }
+
+  /**
+   * Button enabled as long as user filled all fields
+   */
+  const formValid =
+    username.trim().length > 0 &&
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    confirm.length > 0;
+
+  const REGISTER_URL = 'http://10.40.137.2:8080/api/createlogin';
+
+  /**
+   * Attempts to register a new account with the provided credentials.
+   * Validates email format, password strength, and password confirmation.
+   * On successful response, navigates to the User Info screen.
+>>>>>>> Stashed changes
    */
   const onSignUp = async () => {
     if (!formValid) return;

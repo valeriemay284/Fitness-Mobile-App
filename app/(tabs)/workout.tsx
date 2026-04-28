@@ -1,4 +1,35 @@
+<<<<<<< Updated upstream
 import { StyleSheet, Text, View } from "react-native";
+=======
+/**
+ * Module: Workout Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Provides a simple workout session screen with selectable exercises,
+ *   animated preview GIFs, and a stopwatch timer.
+ *
+ * Important data structures:
+ *   - workouts: array of exercise definitions with targets and tips
+ *   - seconds/isRunning: timer state for the workout session
+ *
+ * Algorithm note:
+ *   The timer uses a standard setInterval approach for second-by-second
+ *   updates and a looping animated pulse for visual feedback while running.
+ */
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Animated,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+>>>>>>> Stashed changes
 import colors from "../../constants/colors";
 
 export default function Workout() {

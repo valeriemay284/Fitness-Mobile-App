@@ -1,3 +1,20 @@
+/**
+ * Module: Home Screen
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   The landing page of the app, featuring an animated panda mascot, rotating
+ *   motivational phrases, and navigation buttons to register or login.
+ *
+ * Important data structures:
+ *   - pandaPhrases: array of motivational strings displayed in rotation
+ *   - liftAnim/fadeAnim: Animated.Value instances for UI animations
+ *
+ * Algorithm note:
+ *   Uses React Native Animated API with looping sequences for the panda lift
+ *   and fade-in effects, plus a setInterval for phrase rotation.
+ */
 import * as Haptics from "expo-haptics";
 import { Link } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";

@@ -1,10 +1,27 @@
+/**
+ * Module: Progress Ring
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Displays an animated circular progress indicator using 
+ *   react-native-reanimated and react-native-svg.
+ *
+ * Important data structures:
+ *   - progressValue: shared animation value for the arc progress
+ *   - circumference: total circle length used to compute dash offset
+ *
+ * Algorithm note:
+ *   The component clamps progress between 0 and 1 and animates the arc using
+ *   a timing function to create smooth progress transitions.
+ */
 import React, { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
-  Easing,
-  useAnimatedProps,
-  useSharedValue,
-  withTiming,
+    Easing,
+    useAnimatedProps,
+    useSharedValue,
+    withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import colors from "../constants/colors";

@@ -1,3 +1,19 @@
+/**
+ * Module: Weekly Chart
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Renders a simple weekly bar chart using hardcoded sample values.
+ *   Bars are scaled relative to the largest value in the dataset.
+ *
+ * Important data structures:
+ *   - sample: array of numbers representing normalized daily activity
+ *
+ * Algorithm note:
+ *   The component uses a max-based normalization algorithm so each bar
+ *   scales proportionally against the highest data point.
+ */
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import colors from "../constants/colors";
