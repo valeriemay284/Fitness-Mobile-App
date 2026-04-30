@@ -203,7 +203,7 @@ export default function CaloriesPage() {
       setLoadingMessage("Fetching your calorie targets...");
 
       const response = await fetch(
-        `http://10.0.2.2:8080/api/getCaloriesInfo?username=${username}`
+        `http://10.41.221.154:8080/api/getCaloriesInfo?username=${username}`
       );
       const data = await response.json();
       setLoading(false);
