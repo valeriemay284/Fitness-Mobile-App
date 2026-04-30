@@ -50,7 +50,7 @@ export default function UserInfoScreen() {
   const [isSubmitting, setSubmitting] = useState(false);
 
   const heightOptions = useMemo(() => buildHeightOptions(4, 7), []);
-  const REGISTER_URL = 'http:/:8080/api/signup';
+  const REGISTER_URL = 'http:/10.41.221.154:8080/api/signup';
 
   const isPage1Valid = name.trim() !== "" && age.trim() !== "" && sex !== "";
   const isPage2Valid = weight.trim() !== "" && targetWeight.trim() !== "" && activity_Level !== "";

@@ -62,7 +62,7 @@ export default function RegisterScreen() {
     password.length > 0 &&
     confirm.length > 0;
 
-  const REGISTER_URL = 'http://:8080/api/createlogin';
+  const REGISTER_URL = 'http://10.41.221.154:8080/api/createlogin';
 
   /**
    * Attempts to register a new account with the provided credentials. 

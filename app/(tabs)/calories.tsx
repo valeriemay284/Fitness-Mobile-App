@@ -264,7 +264,7 @@ export default function CaloriesPage() {
 
   //  safe number display helper
   const safeNum = (v: any) => {
-    return typeof v === "number" ? v : "-";
+    return typeof v === "number" ? v.toFixed(2) : "-";
   };
 
   if (!permission) return <Text>Requesting camera permission...</Text>;
