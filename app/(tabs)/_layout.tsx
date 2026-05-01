@@ -57,16 +57,6 @@ export default function TabLayout() {
         }}
       />
 
-       {/* Forum tab */}
-       <Tabs.Screen
-        name="forum"
-        options={{
-        title: "Forum",
-        tabBarIcon: ({ color, size }) => (
-      <Ionicons name="text-outline" size={size} color={color} />
-    ),
-  }}
-/>
       {/* Settings tab */}
       <Tabs.Screen
         name="settings"
@@ -74,6 +64,18 @@ export default function TabLayout() {
           title: "Settings",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+
+       {/* Forum tab */}
+       <Tabs.Screen
+          name="Forum"
+          options={{
+           title: "Forum",
+            tabBarIcon: ({ color, size }) => (
+             <Ionicons name="text-outline" size={size} color={color} />
           ),
         }}
       />

@@ -1,4 +1,6 @@
 // @ts-nocheck
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Pedometer } from "expo-sensors";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -11,12 +13,10 @@ import {
   Text,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pedometer } from "expo-sensors";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://10.41.221.154:8080/api";
+const API_BASE_URL = "http://192.168.24.11:8080/api";
 
 const STORAGE_KEYS = {
   xp: "challenge_current_xp",
@@ -522,7 +522,7 @@ export default function ChallengeScreen() {
 
             <View style={styles.heroMascotWrap}>
               <Image
-                source={require("../assets/panda-cheer.png")}
+                source={require("../assets/images/panda-cheer.png")}
                 style={styles.heroMascotImage}
                 resizeMode="contain"
               />

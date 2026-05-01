@@ -1,11 +1,14 @@
+// @ts-nocheck
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router"; // ADDED 12/8
-import React, { useEffect, useRef } from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -17,24 +20,28 @@ import WeeklyChart from "../../components/WeeklyChart";
 import colors from "../../constants/colors";
 
 const { width } = Dimensions.get("window");
+const BANNER_WIDTH = width - 40;
+
+const GROUP_CHALLENGE_GOAL = 100000;
+const GROUP_TOTAL_KEY = "group_challenge_total_steps_demo";
+const GROUP_LAST_UPDATED_KEY = "group_challenge_last_updated_demo";
 
 export default function HomeDashboard() {
-  // get the logged-in user from AuthContext
-  const { user, signOut } = useAuth() as any; //  signOut added 12/8
-  const router = useRouter(); //  ADDED 12/8
+  const { user, signOut } = useAuth();
+  const router = useRouter();
 
-  // format today's date as "Friday, November 15"
+  const [groupTotalSteps, setGroupTotalSteps] = useState(0);
+  const [groupLastUpdated, setGroupLastUpdated] = useState("--");
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 
-  // animated value used for the streak rotation animation
   const streakAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // loop an animation that oscillates from 0 → 1 → 0
     Animated.loop(
       Animated.sequence([
         Animated.timing(streakAnim, {
@@ -51,23 +58,49 @@ export default function HomeDashboard() {
     ).start();
   }, []);
 
-  // rotation interpolation for the streak pill
-  const scale = streakAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.08],
-  });
+  useEffect(() => {
+    loadGroupChallengeBannerData();
+
+    const interval = setInterval(() => {
+      loadGroupChallengeBannerData();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadGroupChallengeBannerData = async () => {
+    try {
+      const [storedTotal, storedLastUpdated] = await Promise.all([
+        AsyncStorage.getItem(GROUP_TOTAL_KEY),
+        AsyncStorage.getItem(GROUP_LAST_UPDATED_KEY),
+      ]);
+
+      if (storedTotal) {
+        setGroupTotalSteps(Number(storedTotal));
+      }
+
+      if (storedLastUpdated) {
+        setGroupLastUpdated(storedLastUpdated);
+      }
+    } catch (error) {
+      console.log("Error loading group challenge banner:", error);
+    }
+  };
+
+  const groupProgressPercent = Math.min(
+    groupTotalSteps / GROUP_CHALLENGE_GOAL,
+    1
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* top banner with gradient background */}
       <LinearGradient
         colors={[colors.primaryDark, colors.primary]}
         style={styles.headerGradient}
       >
-        {/* left: greeting/date — right: avatar + sign out */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.greeting}>Hi, {user?.name || "Friend"} </Text>
+            <Text style={styles.greeting}>Hi, {user?.name || "Friend"}</Text>
             <Text style={styles.date}>{today}</Text>
           </View>
 
@@ -77,11 +110,10 @@ export default function HomeDashboard() {
               style={styles.avatar}
             />
 
-            {/* SIGN OUT BUTTON */}
             <Pressable
               onPress={() => {
-                signOut();               // Clear auth
-                router.replace("/login"); // Redirect to login screen
+                signOut();
+                router.replace("/login");
               }}
               style={styles.signOutBtn}
             >
@@ -90,7 +122,6 @@ export default function HomeDashboard() {
           </View>
         </View>
 
-        {/* animated streak section */}
         <View style={styles.streakRow}>
           <Animated.View
             style={[
@@ -98,7 +129,6 @@ export default function HomeDashboard() {
               {
                 transform: [
                   {
-                    // pill rotates continuously
                     rotate: streakAnim.interpolate({
                       inputRange: [0, 1],
                       outputRange: ["0deg", "360deg"],
@@ -111,7 +141,6 @@ export default function HomeDashboard() {
             <Text style={styles.streakLabel}>day streak</Text>
           </Animated.View>
 
-          {/* small stats displayed next to the streak */}
           <View style={styles.smallStats}>
             <Text style={styles.smallValue}>+3</Text>
             <Text style={styles.smallLabel}>workouts</Text>
@@ -119,52 +148,143 @@ export default function HomeDashboard() {
         </View>
       </LinearGradient>
 
-      {/* main dashboard content below banner */}
-      <View style={styles.content}>
-        {/* three progress rings */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.ringsRow}>
           <ProgressRing size={92} progress={0.45} label="Daily" sub="45%" />
           <ProgressRing size={92} progress={0.6} label="Goal" sub="60%" />
           <ProgressRing size={92} progress={0.3} label="Move" sub="30%" />
         </View>
 
-        {/* weekly bar chart card */}
+        <View style={styles.challengeSection}>
+          <Text style={styles.sectionTitle}>Challenges</Text>
+
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={BANNER_WIDTH + 12}
+            contentContainerStyle={styles.bannerScrollContent}
+          >
+            <Pressable
+              style={[styles.challengeCard, { width: BANNER_WIDTH }]}
+              onPress={() => router.push("/challenges")}
+            >
+              <View style={styles.bannerTextWrap}>
+                <Text style={styles.challengeCardTitle}>Daily Challenges</Text>
+                <Text style={styles.challengeCardSubtitle}>
+                  Complete today’s challenges and earn XP!
+                </Text>
+
+                <View style={styles.bannerBadge}>
+                  <Text style={styles.bannerBadgeText}>Personal</Text>
+                </View>
+              </View>
+
+              <Text style={styles.challengeCardArrow}>›</Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.challengeCard,
+                styles.groupCard,
+                { width: BANNER_WIDTH },
+              ]}
+              onPress={() => router.push("/group_challenges")}
+            >
+              <View style={styles.bannerTextWrap}>
+                <Text style={styles.challengeCardTitle}>Group Challenge</Text>
+                <Text style={styles.challengeCardSubtitle}>
+                  Join the 100,000 step community challenge and contribute your
+                  steps.
+                </Text>
+
+                <View style={styles.groupProgressRow}>
+                  <Text style={styles.groupProgressText}>
+                    {groupTotalSteps.toLocaleString()} /{" "}
+                    {GROUP_CHALLENGE_GOAL.toLocaleString()} steps
+                  </Text>
+                  <Text style={styles.groupProgressPercent}>
+                    {Math.round(groupProgressPercent * 100)}%
+                  </Text>
+                </View>
+
+                <View style={styles.progressBarTrack}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${groupProgressPercent * 100}%` },
+                    ]}
+                  />
+                </View>
+
+                <Text style={styles.groupUpdatedText}>
+                  Updates every 5 min • Last: {groupLastUpdated}
+                </Text>
+
+                <View style={styles.bannerBadge}>
+                  <Text style={styles.bannerBadgeText}>Community</Text>
+                </View>
+              </View>
+
+              <Text style={styles.challengeCardArrow}>›</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+
         <View style={styles.chartCard}>
           <Text style={styles.cardTitle}>This Week</Text>
           <WeeklyChart style={{ marginTop: 8 }} />
         </View>
 
-        {/* quick actions */}
         <View style={styles.toolsCard}>
           <Text style={styles.cardTitle}>Quick Access</Text>
 
-          <View style={styles.toolsRow}>
-            <Pressable 
+          <View style={styles.toolsGrid}>
+            <Pressable
               style={styles.toolBtn}
               onPress={() => router.push("/(tabs)/workout")}
             >
               <Text style={styles.toolText}>Start Workout</Text>
             </Pressable>
 
-            {/* GO TO CALORIES */}
             <Pressable
               style={styles.toolBtn}
               onPress={() => router.push("/(tabs)/calories")}
             >
               <Text style={styles.toolText}>Log Calories</Text>
             </Pressable>
+
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/challenges")}
+            >
+              <Text style={styles.toolText}>Challenges</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/group_challenges")}
+            >
+              <Text style={styles.toolText}>Group Challenge</Text>
+            </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // root container
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
-  // header gradient section
   headerGradient: {
     paddingHorizontal: 20,
     paddingTop: 18,
@@ -173,19 +293,28 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
 
-  // greeting + avatar row
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
-  greeting: { color: "#fff", fontSize: 26, fontWeight: "800" },
-  date: { color: "rgba(255,255,255,0.85)", marginTop: 4 },
+  greeting: {
+    color: "#fff",
+    fontSize: 26,
+    fontWeight: "800",
+  },
 
-  avatar: { width: 64, height: 64 },
+  date: {
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 4,
+  },
 
-  // sign out button (small)
+  avatar: {
+    width: 64,
+    height: 64,
+  },
+
   signOutBtn: {
     marginTop: 6,
     paddingHorizontal: 10,
@@ -193,13 +322,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.18)",
     borderRadius: 8,
   },
+
   signOutTxt: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
   },
 
-  // streak section row layout
   streakRow: {
     flexDirection: "row",
     marginTop: 16,
@@ -215,15 +344,145 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  streakLabel: { color: "rgba(255,255,255,0.9)", fontSize: 12 },
+  streakLabel: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+  },
 
-  smallStats: { alignItems: "flex-end" },
-  smallValue: { color: "#fff", fontWeight: "800" },
-  smallLabel: { color: "rgba(255,255,255,0.9)", fontSize: 12 },
+  smallStats: {
+    alignItems: "flex-end",
+  },
 
-  content: { padding: 20 },
+  smallValue: {
+    color: "#fff",
+    fontWeight: "800",
+  },
 
-  ringsRow: { flexDirection: "row", justifyContent: "space-between" },
+  smallLabel: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+  },
+
+  content: {
+    flex: 1,
+  },
+
+  contentContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  ringsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  challengeSection: {
+    marginTop: 18,
+  },
+
+  sectionTitle: {
+    fontWeight: "800",
+    fontSize: 18,
+    color: "#2F4F3E",
+    marginBottom: 12,
+  },
+
+  bannerScrollContent: {
+    paddingRight: 12,
+  },
+
+  challengeCard: {
+    marginRight: 12,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: "#EAF4DD",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  groupCard: {
+    backgroundColor: "#DDECC8",
+  },
+
+  bannerTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  challengeCardTitle: {
+    fontWeight: "800",
+    fontSize: 16,
+    color: "#2F4F3E",
+  },
+
+  challengeCardSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#4B6354",
+    lineHeight: 18,
+  },
+
+  challengeCardArrow: {
+    fontSize: 26,
+    fontWeight: "400",
+    color: "#2F4F3E",
+  },
+
+  bannerBadge: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    backgroundColor: "rgba(47,79,62,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+
+  bannerBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#2F4F3E",
+  },
+
+  groupProgressRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  groupProgressText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#2F4F3E",
+  },
+
+  groupProgressPercent: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#2F4F3E",
+  },
+
+  progressBarTrack: {
+    marginTop: 8,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    overflow: "hidden",
+  },
+
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#6B8A82",
+  },
+
+  groupUpdatedText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#4B6354",
+  },
 
   chartCard: {
     marginTop: 18,
@@ -235,7 +494,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  cardTitle: { fontWeight: "800", fontSize: 16 },
+  cardTitle: {
+    fontWeight: "800",
+    fontSize: 16,
+  },
 
   toolsCard: {
     marginTop: 14,
@@ -244,20 +506,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  toolsRow: {
+  toolsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     marginTop: 12,
   },
 
   toolBtn: {
-    flex: 1,
-    marginHorizontal: 6,
+    width: "48%",
+    marginBottom: 12,
     paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: colors.cardBgLight,
     alignItems: "center",
   },
 
-  toolText: { fontWeight: "700" },
+  toolText: {
+    fontWeight: "700",
+  },
 });
