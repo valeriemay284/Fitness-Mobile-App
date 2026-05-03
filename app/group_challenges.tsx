@@ -15,14 +15,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Pedometer } from "expo-sensors";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://10.41.218.23:8080/api";
+const API_BASE_URL = "http://10.41.221.154:8080/api";
 
 const GROUP_CHALLENGE = {
-  id: "group-steps-100k",
+  id: 1,
   title: "100,000 Step Community Challenge",
   subtitle: "Everyone who joins contributes their tracked steps.",
   goal: 100000,
-  description:
+  fallbackDescription:
     "Join the community challenge and help everyone reach 100,000 total steps. Your contribution is tracked from your device pedometer after you join.",
 };
 
@@ -31,8 +31,9 @@ const STORAGE_KEYS = {
   baselineSteps: "group_challenge_baseline_steps",
   lastSyncedContribution: "group_challenge_last_synced_contribution",
   totalGroupSteps: "group_challenge_total_steps_backend_cache",
-  participantCount: "group_challenge_participants_backend_cache",
   lastUpdated: "group_challenge_last_updated_backend_cache",
+  status: "group_challenge_status_backend_cache",
+  description: "group_challenge_description_backend_cache",
 };
 
 export default function GroupChallengesScreen() {
@@ -50,9 +51,12 @@ export default function GroupChallengesScreen() {
   const [myContribution, setMyContribution] = useState(0);
 
   const [groupTotalSteps, setGroupTotalSteps] = useState(0);
-  const [participantCount, setParticipantCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [challengeStatus, setChallengeStatus] = useState("active");
+  const [challengeDescription, setChallengeDescription] = useState(
+    GROUP_CHALLENGE.fallbackDescription
+  );
 
   const pedometerSub = useRef(null);
 
@@ -90,26 +94,26 @@ export default function GroupChallengesScreen() {
     return () => clearInterval(interval);
   }, [username, isJoined, myContribution]);
 
+  const getUserKey = () => username || "guest";
+
   const loadStoredState = async () => {
     try {
-      const userKey = username || "guest";
+      const userKey = getUserKey();
 
       const [
         storedJoined,
         storedBaseline,
-        storedLastSynced,
         storedGroupTotal,
-        storedParticipants,
         storedLastUpdated,
+        storedStatus,
+        storedDescription,
       ] = await Promise.all([
         AsyncStorage.getItem(`${STORAGE_KEYS.joined}_${userKey}`),
         AsyncStorage.getItem(`${STORAGE_KEYS.baselineSteps}_${userKey}`),
-        AsyncStorage.getItem(
-          `${STORAGE_KEYS.lastSyncedContribution}_${userKey}`
-        ),
         AsyncStorage.getItem(STORAGE_KEYS.totalGroupSteps),
-        AsyncStorage.getItem(STORAGE_KEYS.participantCount),
         AsyncStorage.getItem(STORAGE_KEYS.lastUpdated),
+        AsyncStorage.getItem(STORAGE_KEYS.status),
+        AsyncStorage.getItem(STORAGE_KEYS.description),
       ]);
 
       if (storedJoined) {
@@ -124,12 +128,16 @@ export default function GroupChallengesScreen() {
         setGroupTotalSteps(Number(storedGroupTotal));
       }
 
-      if (storedParticipants) {
-        setParticipantCount(Number(storedParticipants));
-      }
-
       if (storedLastUpdated) {
         setLastUpdated(storedLastUpdated);
+      }
+
+      if (storedStatus) {
+        setChallengeStatus(storedStatus);
+      }
+
+      if (storedDescription) {
+        setChallengeDescription(storedDescription);
       }
     } catch (error) {
       console.log("Error loading group challenge state:", error);
@@ -150,15 +158,13 @@ export default function GroupChallengesScreen() {
       setTodaySteps(result.steps || 0);
 
       pedometerSub.current = Pedometer.watchStepCount((result) => {
-        setTodaySteps((prev) => prev + (result.steps || 0));
+        setTodaySteps(pedometerBaseRef.current + watchedSteps);
       });
     } catch (error) {
       console.log("Pedometer error:", error);
       setPedometerAvailable(false);
     }
   };
-
-  const getUserKey = () => username || "guest";
 
   const updateLastUpdatedTime = async () => {
     const now = new Date().toLocaleTimeString([], {
@@ -170,54 +176,66 @@ export default function GroupChallengesScreen() {
     await AsyncStorage.setItem(STORAGE_KEYS.lastUpdated, now);
   };
 
-  const cacheGroupProgress = async (totalSteps, participants) => {
+  const cacheGroupChallengeData = async ({
+    totalSteps,
+    status,
+    description,
+  }) => {
     try {
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.totalGroupSteps, String(totalSteps)),
+        AsyncStorage.setItem(STORAGE_KEYS.status, String(status || "")),
         AsyncStorage.setItem(
-          STORAGE_KEYS.participantCount,
-          String(participants)
+          STORAGE_KEYS.description,
+          String(description || "")
         ),
       ]);
     } catch (error) {
-      console.log("Error caching group progress:", error);
+      console.log("Error caching group challenge data:", error);
     }
   };
 
   const fetchGroupChallengeProgress = async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/groupChallenge/progress?groupChallengeId=${encodeURIComponent(
-          GROUP_CHALLENGE.id
-        )}`
+        `${API_BASE_URL}/getGroupChallenge/${GROUP_CHALLENGE.id}`
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch group challenge progress");
+        throw new Error("Failed to fetch group challenge");
       }
 
       const data = await response.json();
 
-      const totalSteps = Number(data.totalSteps || 0);
-      const participants = Number(data.participantCount || 0);
+      const totalSteps = Number(data.progress || 0);
+      const status = data.currentStatus || "active";
+      const description =
+        data.description || GROUP_CHALLENGE.fallbackDescription;
 
       setGroupTotalSteps(totalSteps);
-      setParticipantCount(participants);
+      setChallengeStatus(status);
+      setChallengeDescription(description);
 
-      await cacheGroupProgress(totalSteps, participants);
+      await cacheGroupChallengeData({
+        totalSteps,
+        status,
+        description,
+      });
+
       await updateLastUpdatedTime();
     } catch (error) {
       console.log("fetchGroupChallengeProgress error:", error);
     }
   };
 
-  const joinGroupChallenge = async () => {
+  const updateProgressOnBackend = async (newContributionToAdd) => {
     const payload = {
-      username: String(username),
       groupChallengeId: GROUP_CHALLENGE.id,
+      username: String(username),
+      progressUpdate: Number(newContributionToAdd),
     };
 
-    const response = await fetch(`${API_BASE_URL}/groupChallenge/join`, {
+    const response = await fetch(`${API_BASE_URL}/updateProgress`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -227,34 +245,10 @@ export default function GroupChallengesScreen() {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || "Failed to join group challenge");
+      throw new Error(text || "Failed to update challenge progress");
     }
 
-    return response.json().catch(() => null);
-  };
-
-  const syncStepsToBackend = async (newContributionToAdd) => {
-    const payload = {
-      username: String(username),
-      groupChallengeId: GROUP_CHALLENGE.id,
-      steps: Number(newContributionToAdd),
-      totalContribution: Number(myContribution),
-    };
-
-    const response = await fetch(`${API_BASE_URL}/groupChallenge/updateSteps`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || "Failed to sync group steps");
-    }
-
-    return response.json().catch(() => null);
+    return response.text();
   };
 
   const handleJoin = async () => {
@@ -274,8 +268,6 @@ export default function GroupChallengesScreen() {
     try {
       const userKey = getUserKey();
 
-      await joinGroupChallenge();
-
       setIsJoined(true);
       setBaselineSteps(todaySteps);
 
@@ -291,11 +283,9 @@ export default function GroupChallengesScreen() {
         ),
       ]);
 
-      await fetchGroupChallengeProgress();
-
       Alert.alert(
         "Joined!",
-        "Your steps from this point forward will count toward the 100,000 step group challenge."
+        "Your steps from this point forward will count toward the group challenge."
       );
     } catch (error) {
       console.log("Join error:", error);
@@ -326,20 +316,8 @@ export default function GroupChallengesScreen() {
         0
       );
 
-      if (isJoined && newContributionToAdd > 0) {
-        const syncResponse = await syncStepsToBackend(newContributionToAdd);
-
-        if (syncResponse) {
-          const totalSteps = Number(syncResponse.totalSteps || groupTotalSteps);
-          const participants = Number(
-            syncResponse.participantCount || participantCount
-          );
-
-          setGroupTotalSteps(totalSteps);
-          setParticipantCount(participants);
-
-          await cacheGroupProgress(totalSteps, participants);
-        }
+      if (isJoined && newContributionToAdd > 0 && challengeStatus !== "ended") {
+        await updateProgressOnBackend(newContributionToAdd);
 
         await AsyncStorage.setItem(
           `${STORAGE_KEYS.lastSyncedContribution}_${userKey}`,
@@ -360,7 +338,8 @@ export default function GroupChallengesScreen() {
 
   const progressPercent = Math.min(groupTotalSteps / GROUP_CHALLENGE.goal, 1);
   const stepsRemaining = Math.max(GROUP_CHALLENGE.goal - groupTotalSteps, 0);
-  const challengeComplete = groupTotalSteps >= GROUP_CHALLENGE.goal;
+  const challengeComplete =
+    groupTotalSteps >= GROUP_CHALLENGE.goal || challengeStatus === "ended";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -378,7 +357,7 @@ export default function GroupChallengesScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>Group Challenge</Text>
           <Text style={styles.heroTitle}>{GROUP_CHALLENGE.title}</Text>
-          <Text style={styles.heroSubtitle}>{GROUP_CHALLENGE.description}</Text>
+          <Text style={styles.heroSubtitle}>{challengeDescription}</Text>
 
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
@@ -388,7 +367,9 @@ export default function GroupChallengesScreen() {
             </View>
 
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Refreshes every 5 min</Text>
+              <Text style={styles.badgeText}>
+                {challengeStatus === "ended" ? "Ended" : "Refreshes every 5 min"}
+              </Text>
             </View>
           </View>
         </View>
@@ -417,7 +398,7 @@ export default function GroupChallengesScreen() {
 
           <Text style={styles.progressSubText}>
             {challengeComplete
-              ? "Goal reached! The community completed the challenge."
+              ? "Challenge complete or ended."
               : `${stepsRemaining.toLocaleString()} steps remaining`}
           </Text>
 
@@ -427,10 +408,8 @@ export default function GroupChallengesScreen() {
 
           <View style={styles.infoGrid}>
             <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>Participants</Text>
-              <Text style={styles.infoValue}>
-                {participantCount.toLocaleString()}
-              </Text>
+              <Text style={styles.infoLabel}>Status</Text>
+              <Text style={styles.infoValue}>{challengeStatus}</Text>
             </View>
 
             <View style={styles.infoBox}>
@@ -469,7 +448,7 @@ export default function GroupChallengesScreen() {
           <Text style={styles.helperText}>
             Once you join, only the steps you take after joining are counted for
             your contribution. Every 5 minutes, the app sends only your new
-            unsynced steps to the backend and then refreshes the shared total.
+            unsynced steps to the backend as a progress update.
           </Text>
 
           {!isJoined ? (
@@ -480,8 +459,11 @@ export default function GroupChallengesScreen() {
             <Pressable
               style={styles.primaryButton}
               onPress={() => syncGroupProgress(true)}
+              disabled={challengeStatus === "ended"}
             >
-              <Text style={styles.primaryButtonText}>Sync My Steps</Text>
+              <Text style={styles.primaryButtonText}>
+                {challengeStatus === "ended" ? "Challenge Ended" : "Sync My Steps"}
+              </Text>
             </Pressable>
           )}
         </View>
@@ -562,13 +544,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#2F4F3E",
     marginBottom: 12,
-  },
-
-  bodyText: {
-    fontSize: 14,
-    color: "#5B6470",
-    lineHeight: 21,
-    marginTop: 12,
   },
 
   progressHeaderRow: {
@@ -675,15 +650,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",
-  },
-
-  bulletList: {
-    marginTop: 6,
-  },
-
-  bulletItem: {
-    fontSize: 14,
-    color: "#5B6470",
-    lineHeight: 22,
   },
 });

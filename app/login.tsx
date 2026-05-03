@@ -18,7 +18,6 @@ import {
 } from "react-native-safe-area-context";
 import { useAuth } from "../components/AuthContext";
 
-import colors from "../constants/colors";
 import formStyles from "../constants/formStyles";
 
 export default function LoginScreen() {
@@ -33,7 +32,7 @@ export default function LoginScreen() {
 
   const isValid = username.trim().length > 0 && password.length >= 6;
 
-  const LOGIN_URL = "http://:8080/api/login";
+  const LOGIN_URL = "http://192.168.1.20:8080/api/login";
 
   const onLogin = async () => {
     if (!isValid || isSubmitting) return;

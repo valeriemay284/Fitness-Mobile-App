@@ -1,28 +1,42 @@
+/**
+ * Module: Root Layout
+ * Date: 2026-04-17
+ * Programmer: Group 4
+ *
+ * Description:
+ *   Initializes the app shell and provides the AuthProvider to the
+ *   navigation stack. It also loads custom fonts and manages the splash
+ *   screen visibility until fonts are ready.
+ *
+ * Important data structures:
+ *   - loaded: boolean state from useFonts indicating font readiness
+ *
+ * Algorithm note:
+ *   The useEffect hook hides the splash screen only after font loading
+ *   completes, preventing a blank screen or layout shift during startup.
+ */
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
+import AiChatBubble from "../components/AiChatBubble";
 import { AuthProvider } from "../components/AuthContext";
 
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     Poppins: require("../assets/fonts/Poppins-Regular.ttf"),
-    Ionicons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
   });
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
-  if (!loaded) return null;
+  if (!fontsLoaded) return null;
 
-  return (
+  // Stack here just manages routing
+  return(
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }} />
+      <AiChatBubble />
     </AuthProvider>
   );
 }

@@ -11,11 +11,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import colors from "../../constants/colors";
 
+type MuscleGroup = "All" | "Chest" | "Legs" | "Core" | "Arms";
+
+const muscleGroups: MuscleGroup[] = ["All", "Chest", "Legs", "Core", "Arms"];
+
 const workouts = [
   {
     id: "pushup",
     name: "Push-Up",
     target: "Chest, shoulders, triceps",
+    group: "Chest",
+    difficulty: "Beginner",
+    equipment: "Bodyweight",
+    sets: "3 sets × 12 reps",
     demo: require("../../assets/workouts/pushup.gif"),
     tip: "Keep your body in a straight line and avoid letting your hips sag.",
   },
@@ -23,6 +31,10 @@ const workouts = [
     id: "benchpress",
     name: "Bench Press",
     target: "Chest, shoulders, triceps",
+    group: "Chest",
+    difficulty: "Intermediate",
+    equipment: "Barbell",
+    sets: "4 sets × 8 reps",
     demo: require("../../assets/workouts/benchpress.gif"),
     tip: "Keep your feet planted and lower the bar with control.",
   },
@@ -30,22 +42,28 @@ const workouts = [
     id: "squat",
     name: "Squat",
     target: "Legs, glutes, core",
+    group: "Legs",
+    difficulty: "Beginner",
+    equipment: "Bodyweight",
+    sets: "3 sets × 15 reps",
     demo: require("../../assets/workouts/squat.gif"),
     tip: "Keep your chest up and drive through your heels.",
   },
 ];
 
 export default function Workout() {
+  const [selectedGroup, setSelectedGroup] = useState<MuscleGroup>("All");
   const [selectedWorkout, setSelectedWorkout] = useState(workouts[0]);
-
-  // timer state
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
-  // animated value for timer pulse
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // timer logic
+  const filteredWorkouts =
+    selectedGroup === "All"
+      ? workouts
+      : workouts.filter((workout) => workout.group === selectedGroup);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -60,7 +78,6 @@ export default function Workout() {
     };
   }, [isRunning]);
 
-  // animate timer while running
   useEffect(() => {
     let animation: Animated.CompositeAnimation | null = null;
 
@@ -91,9 +108,7 @@ export default function Workout() {
     }
 
     return () => {
-      if (animation) {
-        animation.stop();
-      }
+      if (animation) animation.stop();
     };
   }, [isRunning, pulseAnim]);
 
@@ -101,10 +116,14 @@ export default function Workout() {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
 
-    const mm = mins < 10 ? `0${mins}` : `${mins}`;
-    const ss = secs < 10 ? `0${secs}` : `${secs}`;
+    return `${mins < 10 ? `0${mins}` : mins}:${
+      secs < 10 ? `0${secs}` : secs
+    }`;
+  };
 
-    return `${mm}:${ss}`;
+  const startSelectedWorkout = () => {
+    setSeconds(0);
+    setIsRunning(true);
   };
 
   return (
@@ -115,19 +134,17 @@ export default function Workout() {
       <View style={styles.container}>
         <View style={styles.headerBlock}>
           <Text style={[styles.title, { color: colors.text }]}>Workout</Text>
-
           <Text style={[styles.subtitle, { color: colors.text }]}>
-            Choose an exercise, watch the movement, and track your session time.
+            Pick a muscle group, choose an exercise, and track your session.
           </Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={[styles.timerCard, { backgroundColor: colors.cardBg }]}>
             <Text style={[styles.timerLabel, { color: colors.primaryDark }]}>
-              Workout Timer
+              {selectedWorkout.name} Timer
             </Text>
 
-            {/* animated timer text */}
             <Animated.Text
               style={[
                 styles.timerText,
@@ -172,8 +189,55 @@ export default function Workout() {
             </View>
           </View>
 
+          <Text style={[styles.sectionLabel, { color: colors.text }]}>
+            Target Muscle
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {muscleGroups.map((group) => {
+              const active = selectedGroup === group;
+
+              return (
+                <TouchableOpacity
+                  key={group}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: active
+                        ? colors.primaryDark
+                        : colors.cardBg,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedGroup(group);
+
+                    const firstMatch =
+                      group === "All"
+                        ? workouts[0]
+                        : workouts.find((workout) => workout.group === group);
+
+                    if (firstMatch) setSelectedWorkout(firstMatch);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: active ? "#fff" : colors.text },
+                    ]}
+                  >
+                    {group}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
           <View style={styles.listContainer}>
-            {workouts.map((workout) => {
+            {filteredWorkouts.map((workout) => {
               const isSelected = selectedWorkout.id === workout.id;
 
               return (
@@ -185,22 +249,33 @@ export default function Workout() {
                       backgroundColor: isSelected
                         ? colors.primaryDark
                         : colors.cardBg,
-                      borderColor: isSelected
-                        ? colors.primaryDark
-                        : "transparent",
                     },
                   ]}
                   onPress={() => setSelectedWorkout(workout)}
                   activeOpacity={0.85}
                 >
-                  <Text
-                    style={[
-                      styles.workoutButtonText,
-                      { color: isSelected ? "#fff" : colors.text },
-                    ]}
-                  >
-                    {workout.name}
-                  </Text>
+                  <View style={styles.workoutTopRow}>
+                    <Text
+                      style={[
+                        styles.workoutButtonText,
+                        { color: isSelected ? "#fff" : colors.text },
+                      ]}
+                    >
+                      {workout.name}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.badge,
+                        {
+                          backgroundColor: isSelected ? "#ffffff25" : "#e9ece4",
+                          color: isSelected ? "#fff" : colors.primaryDark,
+                        },
+                      ]}
+                    >
+                      {workout.difficulty}
+                    </Text>
+                  </View>
 
                   <Text
                     style={[
@@ -210,21 +285,38 @@ export default function Workout() {
                   >
                     {workout.target}
                   </Text>
+
+                  <Text
+                    style={[
+                      styles.workoutMeta,
+                      { color: isSelected ? "#eef3ee" : colors.text },
+                    ]}
+                  >
+                    {workout.equipment} • {workout.sets}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.cardBg }]}>
-            <View style={styles.cardTop}>
-              <View style={styles.cardTitleWrap}>
-                <Text style={[styles.cardTitle, { color: colors.primaryDark }]}>
-                  {selectedWorkout.name}
-                </Text>
+            <Text style={[styles.cardTitle, { color: colors.primaryDark }]}>
+              {selectedWorkout.name}
+            </Text>
 
-                <Text style={[styles.cardSubtitle, { color: colors.text }]}>
-                  Target: {selectedWorkout.target}
-                </Text>
+            <Text style={[styles.cardSubtitle, { color: colors.text }]}>
+              Target: {selectedWorkout.target}
+            </Text>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailPill}>
+                <Text style={styles.detailText}>{selectedWorkout.difficulty}</Text>
+              </View>
+              <View style={styles.detailPill}>
+                <Text style={styles.detailText}>{selectedWorkout.equipment}</Text>
+              </View>
+              <View style={styles.detailPill}>
+                <Text style={styles.detailText}>{selectedWorkout.sets}</Text>
               </View>
             </View>
 
@@ -236,11 +328,20 @@ export default function Workout() {
               />
             </View>
 
+            <TouchableOpacity
+              style={[styles.startWorkoutBtn, { backgroundColor: colors.primaryDark }]}
+              onPress={startSelectedWorkout}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.timerButtonText}>
+                Start {selectedWorkout.name}
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.tipBlock}>
               <Text style={[styles.tipLabel, { color: colors.primaryDark }]}>
                 Quick Tip
               </Text>
-
               <Text style={[styles.tipText, { color: colors.text }]}>
                 {selectedWorkout.tip}
               </Text>
@@ -262,18 +363,18 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 32,
+    fontWeight: "800",
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     opacity: 0.7,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   timerCard: {
     padding: 18,
-    borderRadius: 18,
+    borderRadius: 24,
     marginBottom: 20,
     shadowColor: "#000",
     shadowOpacity: 0.06,
@@ -281,13 +382,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   timerLabel: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     marginBottom: 8,
   },
   timerText: {
-    fontSize: 34,
-    fontWeight: "800",
+    fontSize: 48,
+    fontWeight: "900",
     marginBottom: 14,
   },
   timerButtonRow: {
@@ -296,79 +397,133 @@ const styles = StyleSheet.create({
   },
   timerButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: "center",
   },
   timerButtonText: {
     color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
   },
   resetButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  sectionLabel: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+  chipRow: {
+    gap: 10,
+    paddingBottom: 16,
+  },
+  chip: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  chipText: {
+    fontWeight: "800",
   },
   listContainer: {
     marginBottom: 20,
   },
   workoutButton: {
     padding: 18,
-    borderRadius: 18,
+    borderRadius: 22,
     marginBottom: 12,
-    borderWidth: 1,
+  },
+  workoutTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   workoutButtonText: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  badge: {
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: "800",
   },
   workoutTarget: {
-    fontSize: 14,
-    marginTop: 6,
+    fontSize: 15,
+    marginTop: 8,
     opacity: 0.9,
     lineHeight: 20,
   },
+  workoutMeta: {
+    fontSize: 13,
+    marginTop: 6,
+    opacity: 0.8,
+    fontWeight: "600",
+  },
   card: {
     padding: 20,
-    borderRadius: 18,
+    borderRadius: 24,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
     marginBottom: 24,
   },
-  cardTop: {
-    marginBottom: 16,
-  },
-  cardTitleWrap: {
-    gap: 4,
-  },
   cardTitle: {
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 36,
+    fontWeight: "900",
   },
   cardSubtitle: {
-    fontSize: 16,
+    fontSize: 17,
     opacity: 0.82,
-    lineHeight: 22,
+    lineHeight: 24,
+    marginTop: 6,
+  },
+  detailRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 16,
+  },
+  detailPill: {
+    backgroundColor: "#e9ece4",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  detailText: {
+    color: "#2f6f46",
+    fontWeight: "800",
+    fontSize: 12,
   },
   demoWrap: {
     width: "100%",
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
-    marginBottom: 18,
+    marginBottom: 14,
   },
   demo: {
     width: "100%",
-    height: 260,
+    height: 240,
     backgroundColor: "#e9ece4",
+  },
+  startWorkoutBtn: {
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    marginBottom: 18,
   },
   tipBlock: {
     paddingTop: 2,
   },
   tipLabel: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 8,
   },
   tipText: {

@@ -1,4 +1,6 @@
 // @ts-nocheck
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Pedometer } from "expo-sensors";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -11,12 +13,10 @@ import {
   Text,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pedometer } from "expo-sensors";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://10.41.218.23:8080/api";
+const API_BASE_URL = "http://192.168.24.11:8080/api";
 
 const STORAGE_KEYS = {
   xp: "challenge_current_xp",
@@ -29,7 +29,7 @@ const challengeOptions = [
     title: "Push Ups",
     subtitle: "Log your reps manually",
     icon: "💪",
-    cardColor: "#F1F5EC",
+    cardColor: "#F8E8B5",
     xp: 75,
   },
   {
@@ -45,7 +45,7 @@ const challengeOptions = [
     title: "Meal Log",
     subtitle: "Log 3 meals today",
     icon: "🍽️",
-    cardColor: "#EAF4DD",
+    cardColor: "#CFE9EE",
     xp: 50,
   },
 ];
@@ -59,6 +59,7 @@ const levels = [
 
 export default function ChallengeScreen() {
   const { user } = useAuth();
+  const activityLevel = user?.activity_level || "";
 
   const [selectedChallengeId, setSelectedChallengeId] = useState("2");
 
@@ -71,8 +72,8 @@ export default function ChallengeScreen() {
   const [mealsLogged, setMealsLogged] = useState(0);
   const [mealGoal] = useState(3);
 
-  const [loadingChallenge, setLoadingChallenge] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
+  const [loadingChallenge, setLoadingChallenge] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   const [personalizedChallenge, setPersonalizedChallenge] = useState(null);
@@ -118,6 +119,16 @@ export default function ChallengeScreen() {
     currentLevel.name === "Legend"
       ? 0
       : Math.max(nextLevel.minXp - currentXp, 0);
+
+  const selectedChallenge = challengeOptions.find(
+    (item) => item.id === selectedChallengeId
+  );
+
+  const localChallengeDescriptions = {
+    "1": `Do ${pushupGoal} push ups.`,
+    "2": `Walk ${stepsGoal} steps.`,
+    "3": `Log ${mealGoal} meals today.`,
+  };
 
   useEffect(() => {
     loadStoredProgress();
@@ -166,17 +177,6 @@ export default function ChallengeScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!username) return;
-
-    if (selectedChallengeId === "3") {
-      setPersonalizedChallenge(null);
-      return;
-    }
-
-    fetchPersonalizedChallenge(selectedChallengeId);
-  }, [selectedChallengeId, username]);
-
   const loadStoredProgress = async () => {
     try {
       const [storedXp, storedAwardLog] = await Promise.all([
@@ -199,10 +199,6 @@ export default function ChallengeScreen() {
   const getTodayKey = (challengeId) => {
     const today = new Date().toISOString().split("T")[0];
     return `${username}-${challengeId}-${today}`;
-  };
-
-  const getTodayDateString = () => {
-    return new Date().toISOString().split("T")[0];
   };
 
   const getLevelIndexForXp = (xp) => {
@@ -285,73 +281,6 @@ export default function ChallengeScreen() {
     }, 2200);
   };
 
-  const getChallengeRequest = (payload) => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-
-      xhr.open("GET", `${API_BASE_URL}/getChallenge`, true);
-      xhr.setRequestHeader("Content-Type", "application/json");
-
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState !== 4) return;
-
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText);
-            resolve(data);
-          } catch {
-            reject(new Error("Invalid JSON returned from getChallenge"));
-          }
-        } else {
-          reject(new Error(xhr.responseText || "Failed to fetch challenge"));
-        }
-      };
-
-      xhr.onerror = () =>
-        reject(new Error("Network error while fetching challenge"));
-
-      xhr.send(JSON.stringify(payload));
-    });
-  };
-
-  const fetchPersonalizedChallenge = async (challengeId) => {
-    try {
-      setLoadingChallenge(true);
-
-      const payload = {
-        challengeId: String(challengeId),
-        username: String(username),
-      };
-
-      console.log("getChallenge payload:", payload);
-
-      const data = await getChallengeRequest(payload);
-      setPersonalizedChallenge(data);
-      parseChallengeDescription(data);
-    } catch (error) {
-      console.log("getChallenge error:", error);
-      Alert.alert("Error", "Could not load your challenge.");
-    } finally {
-      setLoadingChallenge(false);
-    }
-  };
-
-  const parseChallengeDescription = (challenge) => {
-    const text = challenge?.description?.toLowerCase?.() || "";
-    const match = text.match(/\d+/);
-    const amount = match ? Number(match[0]) : null;
-
-    if (!amount) return;
-
-    if (String(challenge.challengeId) === "1") {
-      setPushupGoal(amount);
-    }
-
-    if (String(challenge.challengeId) === "2") {
-      setStepsGoal(amount);
-    }
-  };
-
   const awardXpIfEligible = (challengeId) => {
     const todayKey = getTodayKey(challengeId);
 
@@ -383,122 +312,186 @@ export default function ChallengeScreen() {
     return { awarded: true, amount: selected.xp };
   };
 
-  const saveChallengeResult = async (result) => {
+  const parseChallengeDescription = (challenge) => {
+    const text = challenge?.description?.toLowerCase?.() || "";
+    const match = text.match(/\d+/);
+    const amount = match ? Number(match[0]) : null;
+
+    if (!amount) return;
+
+    if (String(challenge.challengeId) === "1") {
+      setPushupGoal(amount);
+    }
+
+    if (String(challenge.challengeId) === "2") {
+      setStepsGoal(amount);
+    }
+  };
+
+  const getChallengeRequest = async (payload) => {
+  console.log("opening challenge with:", payload);
+
+  const response = await fetch(`${API_BASE_URL}/getChallenge`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      challengeId: Number(payload.challengeId),
+      username: payload.username,
+    }),
+  });
+
+  const rawText = await response.text();
+
+  console.log("getChallenge status:", response.status);
+  console.log("getChallenge raw response:", rawText);
+
+  if (!response.ok) {
+    throw new Error(rawText || `getChallenge failed: ${response.status}`);
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    throw new Error("Invalid JSON from getChallenge");
+  }
+};
+
+  const handleOpenChallenge = async (challengeId) => {
+    setSelectedChallengeId(challengeId);
+    setModalVisible(true);
+
+    if (challengeId === "3") {
+      setPersonalizedChallenge(null);
+      return;
+    }
+
+    if (!username) {
+      Alert.alert("Error", "No username found.");
+      return;
+    }
+
+    try {
+      setLoadingChallenge(true);
+
+      const data = await getChallengeRequest({
+        challengeId,
+        username,
+      });
+
+      console.log("personalized challenge:", data);
+      setPersonalizedChallenge(data);
+      parseChallengeDescription(data);
+    } catch (error) {
+      console.log("getChallenge error:", error);
+      setPersonalizedChallenge(null);
+      Alert.alert("Error", String(error));
+    } finally {
+      setLoadingChallenge(false);
+    }
+  };
+
+  const saveChallengeResult = async (challengeId, result) => {
     if (!username) {
       Alert.alert("Error", "No user found.");
       return;
     }
 
-    if (!personalizedChallenge) {
-      Alert.alert("Error", "No personalized challenge loaded.");
+    if (
+      (challengeId === "1" || challengeId === "2") &&
+      !personalizedChallenge?.id
+    ) {
+      Alert.alert("Error", "Challenge was not loaded from backend yet.");
       return;
     }
 
     try {
       setSavingResult(true);
 
+      if (challengeId === "3") {
+        const xpAwarded =
+          result === "pass"
+            ? awardXpIfEligible(challengeId)
+            : { awarded: false, amount: 0 };
+
+        Alert.alert(
+          "Success",
+          xpAwarded.awarded
+            ? "Meal challenge completed locally."
+            : result === "pass"
+            ? "Meal challenge completed. XP was already claimed today."
+            : "Meal challenge recorded locally."
+        );
+
+        setModalVisible(false);
+        return;
+      }
+
       const payload = {
-        challengeId: String(personalizedChallenge.challengeId),
-        personalizedChallengeId: String(personalizedChallenge.id),
-        username: String(personalizedChallenge.username),
-        result: String(result),
-        completionDate: getTodayDateString(),
+        challengeId: Number(challengeId),
+        personalizedChallengeId: Number(personalizedChallenge.id),
+        username,
+        result,
       };
 
+      console.log("saveResult url:", `${API_BASE_URL}/saveResult`);
       console.log("saveResult payload:", payload);
 
       const response = await fetch(`${API_BASE_URL}/saveResult`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
         },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Failed to save result");
-      }
+      const rawText = await response.text();
+      console.log("saveResult status:", response.status);
+      console.log("saveResult raw response:", rawText);
 
-      const message = await response.text();
+      if (!response.ok) {
+        throw new Error(rawText || "Failed to save result");
+      }
 
       let xpAwarded = { awarded: false, amount: 0 };
       if (result === "pass") {
-        xpAwarded = awardXpIfEligible(
-          String(personalizedChallenge.challengeId)
-        );
+        xpAwarded = awardXpIfEligible(challengeId);
       }
 
       Alert.alert(
         "Success",
         xpAwarded.awarded
-          ? `${message || "Result saved successfully"}`
+          ? rawText || "Result saved successfully"
           : result === "pass"
-          ? "Result saved successfully. XP for this challenge was already claimed today."
-          : message || "Result saved successfully"
+          ? "Result saved successfully. XP was already claimed today."
+          : rawText || "Result saved successfully"
       );
 
       setModalVisible(false);
-      fetchPersonalizedChallenge(String(personalizedChallenge.challengeId));
     } catch (error) {
       console.log("saveResult error:", error);
-      Alert.alert("Error", "Could not save challenge result.");
+      Alert.alert("Error", String(error));
     } finally {
       setSavingResult(false);
     }
   };
 
-  const handleOpenChallenge = (challengeId) => {
-    setSelectedChallengeId(challengeId);
-    setModalVisible(true);
-  };
-
   const handleSubmitFromModal = async () => {
-    if (selectedChallengeId === "3") {
-      const didPass = mealsLogged >= mealGoal;
-
-      if (!didPass) {
-        Alert.alert(
-          "Not finished yet",
-          "Log all 3 meals to complete this challenge."
-        );
-        return;
-      }
-
-      const xpAwarded = awardXpIfEligible("3");
-
-      Alert.alert(
-        "Success",
-        xpAwarded.awarded
-          ? "Meal challenge completed."
-          : "Meal challenge completed. XP for this challenge was already claimed today."
-      );
-
-      setModalVisible(false);
-      return;
-    }
-
-    if (!personalizedChallenge) {
-      Alert.alert("Please wait", "Challenge data is still loading.");
-      return;
-    }
-
     let didPass = false;
 
     if (selectedChallengeId === "1") {
       didPass = pushups >= pushupGoal;
-    }
-
-    if (selectedChallengeId === "2") {
+    } else if (selectedChallengeId === "2") {
       didPass = todaySteps >= stepsGoal;
+    } else if (selectedChallengeId === "3") {
+      didPass = mealsLogged >= mealGoal;
     }
 
-    await saveChallengeResult(didPass ? "pass" : "fail");
+    await saveChallengeResult(selectedChallengeId, didPass ? "pass" : "fail");
   };
-
-  const selectedChallenge = challengeOptions.find(
-    (item) => item.id === selectedChallengeId
-  );
 
   const todayXpAlreadyClaimed = !!xpAwardLog[getTodayKey(selectedChallengeId)];
 
@@ -529,7 +522,7 @@ export default function ChallengeScreen() {
 
             <View style={styles.heroMascotWrap}>
               <Image
-                source={require("../assets/panda-cheer.png")}
+                source={require("../assets/images/panda-cheer.png")}
                 style={styles.heroMascotImage}
                 resizeMode="contain"
               />
@@ -662,9 +655,7 @@ export default function ChallengeScreen() {
                     </View>
 
                     <View style={styles.challengeTextWrap}>
-                      <Text style={styles.challengeTitle}>
-                        {challenge.title}
-                      </Text>
+                      <Text style={styles.challengeTitle}>{challenge.title}</Text>
                       <Text style={styles.challengeSubtitle}>
                         {challenge.subtitle}
                       </Text>
@@ -686,9 +677,7 @@ export default function ChallengeScreen() {
                   </View>
 
                   <View style={styles.challengeRight}>
-                    <View style={styles.xpPill}>
-                      <Text style={styles.xpText}>+{challenge.xp} XP</Text>
-                    </View>
+                    <Text style={styles.xpText}>+{challenge.xp} XP</Text>
                     <Text style={styles.arrow}>›</Text>
                   </View>
                 </Pressable>
@@ -717,10 +706,9 @@ export default function ChallengeScreen() {
             ) : (
               <Text style={styles.modalDescription}>
                 {selectedChallengeId === "3"
-                  ? "Track your meals for the day. Complete this challenge by logging 3 meals today."
+                  ? localChallengeDescriptions["3"]
                   : personalizedChallenge?.description ||
-                    selectedChallenge?.subtitle ||
-                    "Track your progress"}
+                    localChallengeDescriptions[selectedChallengeId]}
               </Text>
             )}
 
@@ -899,7 +887,7 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     borderRadius: 65,
-    backgroundColor: "#CBE78B",
+    backgroundColor: "#C0EB6A",
     opacity: 0.85,
   },
 
@@ -941,7 +929,7 @@ const styles = StyleSheet.create({
   heroRank: {
     fontSize: 30,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginBottom: 12,
   },
 
@@ -960,17 +948,15 @@ const styles = StyleSheet.create({
   },
 
   levelUpBanner: {
-    backgroundColor: "#EAF4DD",
+    backgroundColor: "#F8E8B5",
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#C8D9B6",
   },
 
   levelUpBannerText: {
-    color: "#2F4F3E",
+    color: "#42564F",
     fontWeight: "800",
     fontSize: 13,
   },
@@ -1028,7 +1014,7 @@ const styles = StyleSheet.create({
   rankLabelTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginBottom: 2,
   },
 
@@ -1063,7 +1049,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginRight: 10,
   },
 
@@ -1100,17 +1086,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     minHeight: 98,
-    borderWidth: 1,
-    borderColor: "rgba(107,138,130,0.14)",
   },
 
   challengeCardSelected: {
     borderWidth: 2.5,
     borderColor: "#42564F",
-    shadowColor: "#42564F",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
 
   challengeLeft: {
@@ -1123,9 +1103,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderWidth: 1,
-    borderColor: "rgba(107,138,130,0.16)",
+    backgroundColor: "rgba(255,255,255,0.5)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -1142,7 +1120,7 @@ const styles = StyleSheet.create({
   challengeTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginBottom: 2,
   },
 
@@ -1164,18 +1142,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 
-  xpPill: {
-    backgroundColor: "rgba(47,79,62,0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 8,
-  },
-
   xpText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
+    marginBottom: 8,
   },
 
   arrow: {
@@ -1191,7 +1162,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(47,79,62,0.22)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -1202,14 +1173,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F6E7",
     borderRadius: 24,
     padding: 22,
-    borderWidth: 1,
-    borderColor: "#E3E7D8",
   },
 
   modalTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginBottom: 10,
   },
 
@@ -1223,7 +1192,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#2F4F3E",
+    color: "#42564F",
     marginBottom: 14,
   },
 
@@ -1245,7 +1214,7 @@ const styles = StyleSheet.create({
   modalCounterButtonText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#2F4F3E",
+    color: "#42564F",
   },
 
   stepStatusBox: {
@@ -1257,17 +1226,15 @@ const styles = StyleSheet.create({
 
   stepStatusText: {
     fontSize: 14,
-    color: "#2F4F3E",
+    color: "#42564F",
     fontWeight: "600",
   },
 
   xpNoticeBox: {
-    backgroundColor: "#F1F5EC",
+    backgroundColor: "#F1EBD8",
     borderRadius: 16,
     padding: 12,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E0E7D6",
   },
 
   xpNoticeText: {
@@ -1290,11 +1257,11 @@ const styles = StyleSheet.create({
   },
 
   cancelButton: {
-    backgroundColor: "#E7ECE3",
+    backgroundColor: "#E5E7EB",
   },
 
   cancelButtonText: {
-    color: "#2F4F3E",
+    color: "#42564F",
     fontWeight: "800",
     fontSize: 15,
   },
