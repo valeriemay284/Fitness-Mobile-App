@@ -154,7 +154,8 @@ export default function RegisterScreen() {
       >
         <View style={styles.screen}>
           <View style={styles.heroWrap}>
-            
+            <View style={styles.heroBlobLeft} />
+            <View style={styles.heroBlobRight} />
 
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>Welcome!</Text>
@@ -162,7 +163,7 @@ export default function RegisterScreen() {
 
             <Text style={styles.heroTitle}>Create Account</Text>
             <Text style={styles.heroSubtitle}>
-              Start tracking workouts, meals, and challenges.
+              Start tracking workouts, challenges, and group goals.
             </Text>
           </View>
 
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   },
 
   mt12: {
-    marginTop: 3,
+    marginTop: 1,
   },
 
   inputIcon: {
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
   },
 
   messageBox: {
-    marginTop: 8,
+    marginTop: 14,
     marginBottom: 4,
     backgroundColor: "#F1F5EC",
     borderRadius: 14,
