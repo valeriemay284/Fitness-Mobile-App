@@ -24,24 +24,20 @@ import ProgressRing from "../../components/ProgressRing";
 import { useStreak } from "../../components/useStreak";
 import colors from "../../constants/colors";
 
-//constants
+// constants
 const { width } = Dimensions.get("window");
-const BANNER_WIDTH = width - 40;
 
-const GROUP_CHALLENGE_GOAL = 100000;          // Total steps goal for group challenge
+const GROUP_CHALLENGE_GOAL = 100000;
 const GROUP_TOTAL_KEY = "group_challenge_total_steps_demo";
 const GROUP_LAST_UPDATED_KEY = "group_challenge_last_updated_demo";
 
-// level definitions 
-// each level has a name and the minimum XP needed to reach it
 const LEVELS = [
-  { name: "Rookie",     minXp: 0 },
-  { name: "Consistent", minXp: 200 },
-  { name: "Pro",        minXp: 1500 },
-  { name: "Legend",     minXp: 6000 },
+  { name: "Rookie",      minXp: 0 },
+  { name: "Consistent",  minXp: 200 },
+  { name: "Pro",         minXp: 1500 },
+  { name: "Legend",      minXp: 6000 },
 ];
 
-// day abbreviations indexed by getDay() (0 = Sunday)
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 
@@ -50,89 +46,118 @@ export default function HomeDashboard() {
   const username = user?.name || "guest";
   const router = useRouter();
   const { streak, refreshStreak } = useStreak(username);
-  // State 
-  const [weeklyData, setWeeklyData]             = useState([]);   // Array of 7 days of stats
-  const [tdee, setTdee]                         = useState(2000); // User's daily calorie target
-  const [liveSteps, setLiveSteps]               = useState(0);    // Real-time step count from pedometer
-  const [groupTotalSteps, setGroupTotalSteps]   = useState(0);    // Group challenge running total
+
+  const [weeklyData, setWeeklyData]             = useState([]);
+  const [tdee, setTdee]                         = useState(2000);
+  const [liveSteps, setLiveSteps]               = useState(0);
+  const [groupTotalSteps, setGroupTotalSteps]   = useState(0);
   const [groupLastUpdated, setGroupLastUpdated] = useState("--");
-  const [selectedDayIndex, setSelectedDayIndex] = useState(6);    // 6 = today (last in the 7-day array)
-  const [xp, setXp]                             = useState(0);    // User's total XP points
+  const [selectedDayIndex, setSelectedDayIndex] = useState(6);
+  const [xp, setXp]                             = useState(0);
 
-  // convenience: the currently selected day's data object
-  const selectedDay = weeklyData[selectedDayIndex] || {};
+  // ─── Single source of truth for today's steps ────────────────────────────
+  // liveSteps comes from the pedometer (resets to 0 on mount until the sensor
+  // fires). storedTodaySteps comes from weeklyData once loaded. We always take
+  // the larger value so a late-loading weeklyData never clobbers a live count.
+  const storedTodaySteps = weeklyData[6]?.steps || 0;
+  const todaySteps = Math.max(storedTodaySteps, liveSteps);
 
-  // today's date as a readable string for the header
+  // Patch today's slot so everything downstream (rings, bars, stat grid) is
+  // driven by todaySteps — no component reads liveSteps directly.
+  const displayWeeklyData = weeklyData.map((day, i) => {
+    if (i !== 6) return day;
+    return { ...day, steps: todaySteps };
+  });
+
+  const selectedDay = displayWeeklyData[selectedDayIndex] || {};
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 
-  // Animation refs 
-  const streakAnim       = useRef(new Animated.Value(0)).current; // Drives the rotating streak icon
-  const animatedBars     = useRef<Animated.Value[]>([]);          // One value per bar in the week chart
-  const animatedProgress = useRef(new Animated.Value(0)).current; // Drives the calorie ring fill
+  // Animation refs
+  const streakAnim       = useRef(new Animated.Value(0)).current;
+  const animatedBars     = useRef<Animated.Value[]>([]);
+  const animatedProgress = useRef(new Animated.Value(0)).current;
 
-  // 1. STREAK ICON — loops a 360° rotation forever
+  // 1. STREAK ICON — pulse scale loop
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(streakAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(streakAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: true,
-        }),
+        Animated.timing(streakAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(streakAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     ).start();
   }, []);
 
-  // 2. PEDOMETER — listens for live step count while screen is mounted
+  // 2. PEDOMETER
+  // watchStepCount only counts steps since the app session opened — it resets
+  // every time the app restarts. Instead we use getStepCountAsync to read the
+  // true day total (midnight → now) on mount, then re-query on every watcher
+  // tick so the displayed number is always the full day count.
   useEffect(() => {
     let sub;
+
+    const fetchDayTotal = async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      try {
+        const result = await Pedometer.getStepCountAsync(start, new Date());
+        if (result?.steps != null) setLiveSteps(result.steps);
+      } catch (e) {
+        console.log("getStepCountAsync error", e);
+      }
+    };
 
     const startPedometer = async () => {
       const available = await Pedometer.isAvailableAsync();
       if (!available) return;
 
-      sub = Pedometer.watchStepCount((res) => {
-        setLiveSteps(res.steps);
-      });
+      // Seed with today's total immediately on mount
+      await fetchDayTotal();
+
+      // On every new step event, re-query the full day range instead of
+      // trusting the session-delta in res.steps
+      sub = Pedometer.watchStepCount(() => fetchDayTotal());
     };
 
     startPedometer();
-    return () => sub && sub.remove(); // clean up listener on unmount
+    return () => sub && sub.remove();
   }, []);
 
-  // 3. SAVE STEPS — whenever liveSteps changes, persist today's count to AsyncStorage
+  // 3. SAVE STEPS — only persist when pedometer has actually fired (> 0).
+  //    getStepCountAsync gives the true day total so no max() guard needed.
   useEffect(() => {
     const saveSteps = async () => {
-      if (!user?.name) return;
-
-      const todayKey = new Date().toISOString().split("T")[0]; // e.g. "2025-05-01"
-
+      if (!user?.name || liveSteps === 0) return;
+      const todayKey = new Date().toISOString().split("T")[0];
       const existing = await AsyncStorage.getItem(`steps_${username}`);
       const parsed   = existing ? JSON.parse(existing) : {};
-
       parsed[todayKey] = liveSteps;
-
       await AsyncStorage.setItem(`steps_${username}`, JSON.stringify(parsed));
     };
-
     saveSteps();
   }, [liveSteps]);
 
-  // 4. GROUP CHALLENGE — load banner data on mount, then refresh every 5 minutes
+
+  // 4. GROUP CHALLENGE polling
   useEffect(() => {
-    loadGroupChallengeBannerData();
-    const interval = setInterval(loadGroupChallengeBannerData, 300_000);
-    return () => clearInterval(interval);
-  }, []);
+    let cancelled = false;
+  
+    const load = async () => {
+      if (!cancelled) await loadGroupChallengeBannerData();
+    };
+  
+    load();
+  
+    const interval = setInterval(load, 300_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [loadGroupChallengeBannerData]);
 
   // 5. CALORIE RING ANIMATION — smoothly animates the ring when progress changes
   const todayCalories = selectedDay.calories || 0;
@@ -146,13 +171,11 @@ export default function HomeDashboard() {
     }).start();
   }, [progress]);
 
-  // 6. BAR CHART ANIMATION — springs each bar to its height when weeklyData loads
+  // 6. BAR CHART ANIMATION — uses displayWeeklyData so bars reflect live steps
   useEffect(() => {
-    //create one Animated.Value per day, all starting at 0
-    animatedBars.current = weeklyData.map(() => new Animated.Value(0));
-
+    animatedBars.current = displayWeeklyData.map(() => new Animated.Value(0));
     Animated.parallel(
-      weeklyData.map((item, i) =>
+      displayWeeklyData.map((item, i) =>
         Animated.spring(animatedBars.current[i], {
           toValue: item.progress,
           friction: 6,
@@ -161,10 +184,9 @@ export default function HomeDashboard() {
         })
       )
     ).start();
-  }, [weeklyData]);
+  }, [weeklyData, todaySteps]);
 
   // DATA LOADERS
-  // load the user's XP total from storage
   const loadXP = async () => {
     try {
       const storedXp = await AsyncStorage.getItem("challenge_current_xp");
@@ -174,20 +196,17 @@ export default function HomeDashboard() {
     }
   };
 
-  // load the group challenge step total and last-updated timestamp
   const loadGroupChallengeBannerData = async () => {
     try {
       const [storedTotal, storedLastUpdated] = await Promise.all([
         AsyncStorage.getItem(GROUP_TOTAL_KEY),
         AsyncStorage.getItem(GROUP_LAST_UPDATED_KEY),
       ]);
-
       if (storedTotal)       setGroupTotalSteps(Number(storedTotal));
       if (storedLastUpdated) setGroupLastUpdated(storedLastUpdated);
     } catch {}
   };
 
-  // build the 7-day stats array from AsyncStorage logs
   const loadWeeklyData = async () => {
     try {
       const [logs, targets, stepsData, workoutsData] = await Promise.all([
@@ -197,27 +216,24 @@ export default function HomeDashboard() {
         AsyncStorage.getItem("workouts_user"),
       ]);
 
-      // also check for a backend-cached group total 
       const groupData = await AsyncStorage.getItem(
         "group_challenge_total_steps_backend_cache"
       );
       if (groupData) setGroupTotalSteps(Number(groupData));
 
-      const parsedLogs     = logs         ? JSON.parse(logs)         : {};
-      const parsedTargets  = targets      ? JSON.parse(targets)       : {};
-      const parsedSteps    = stepsData    ? JSON.parse(stepsData)     : {};
-      const parsedWorkouts = workoutsData ? JSON.parse(workoutsData)  : {};
+      const parsedLogs     = logs         ? JSON.parse(logs)        : {};
+      const parsedTargets  = targets      ? JSON.parse(targets)      : {};
+      const parsedSteps    = stepsData    ? JSON.parse(stepsData)    : {};
+      const parsedWorkouts = workoutsData ? JSON.parse(workoutsData) : {};
 
       const tdeeVal = parsedTargets?.tdee || 0;
       setTdee(tdeeVal);
 
-      // build one entry for each of the last 7 days (index 0 = 6 days ago, index 6 = today)
       const days = [];
-
       for (let i = 6; i >= 0; i--) {
         const d   = new Date();
         d.setDate(d.getDate() - i);
-        const key = d.toISOString().split("T")[0]; // "YYYY-MM-DD"
+        const key = d.toISOString().split("T")[0];
 
         const dayLog   = parsedLogs[key] || [];
         const calories = dayLog.reduce(
@@ -231,7 +247,6 @@ export default function HomeDashboard() {
           scans:    dayLog.length,
           steps:    parsedSteps[key]    || 0,
           workouts: parsedWorkouts[key] || 0,
-          // progress is 0–1, clamped — used to set the bar height in the chart
           progress:
             tdeeVal > 0
               ? Math.min(Math.max(calories / tdeeVal, 0), 1)
@@ -245,7 +260,6 @@ export default function HomeDashboard() {
     }
   };
 
-  // reload data every time the screen comes into focus (e.g. returning from another tab)
   useFocusEffect(
     React.useCallback(() => {
       if (user?.name) {
@@ -257,38 +271,30 @@ export default function HomeDashboard() {
   );
 
   // XP LEVEL CALCULATION
-  //figures out which level the user is at and how far to the next one
   const levelIndex = LEVELS.findIndex((level, i) => {
     const next = LEVELS[i + 1];
-    if (!next) return xp >= level.minXp;       // already at max level
+    if (!next) return xp >= level.minXp;
     return xp >= level.minXp && xp < next.minXp;
   });
-
   const safeIndex    = levelIndex === -1 ? 0 : levelIndex;
   const currentLevel = LEVELS[safeIndex];
-  const nextLevel    = LEVELS[safeIndex + 1] || currentLevel; // falls back to current at max level
-
-  // 0–1 fraction of progress toward the next level
-  const xpProgress =
+  const nextLevel    = LEVELS[safeIndex + 1] || currentLevel;
+  const xpProgress   =
     currentLevel.name === "Legend"
       ? 1
       : (xp - currentLevel.minXp) / (nextLevel.minXp - currentLevel.minXp || 1);
 
-  // how far along the shared 100k-step group challenge is (0–1)
   const groupProgressPercent = Math.min(groupTotalSteps / GROUP_CHALLENGE_GOAL, 1);
 
   // RENDER
   return (
     <SafeAreaView style={styles.safe}>
 
-      {/*  Header gradient with greeting, avatar, and streak pill  */}
-      <LinearGradient
-        colors={[colors.primaryDark, colors.primary]}
-        style={styles.headerGradient}
-      >
+      {/* ── Header — matches login's #DDECC8 green palette ── */}
+      <View style={styles.header}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.greeting}>Hi, {user?.name || "Friend"}</Text>
+            <Text style={styles.greeting}>Hi, {user?.name || "Friend"} 👋</Text>
             <Text style={styles.date}>{today}</Text>
           </View>
 
@@ -306,7 +312,7 @@ export default function HomeDashboard() {
           </View>
         </View>
 
-        {/* Streak pill (rotates) + today's workout count */}
+        {/* streak pill + workout count */}
         <View style={styles.streakRow}>
           <Animated.View
             style={[
@@ -316,7 +322,7 @@ export default function HomeDashboard() {
                   {
                     scale: streakAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [1, 1.1],
+                      outputRange: [1, 1.08],
                     }),
                   },
                 ],
@@ -324,8 +330,8 @@ export default function HomeDashboard() {
             ]}
           >
             <Text style={styles.streakLabel}>
-  🔥 {streak > 0 ? `${streak} day streak` : "Start your streak"}
-</Text>
+              🔥 {streak > 0 ? `${streak} day streak` : "Start your streak"}
+            </Text>
           </Animated.View>
 
           <View style={styles.smallStats}>
@@ -333,11 +339,15 @@ export default function HomeDashboard() {
             <Text style={styles.smallLabel}>workouts</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
+      {/* ── Cream scroll body — matches login card colour #F7F6E7 ── */}
+      <ScrollView
+        style={styles.scrollBody}
+        contentContainerStyle={styles.contentContainer}
+      >
 
-        {/*  progress rings: Calories · Scans · Steps  */}
+        {/* Progress rings */}
         <View style={styles.ringsRow}>
           <ProgressRing
             size={92}
@@ -351,6 +361,7 @@ export default function HomeDashboard() {
             label="Scans"
             sub={`${selectedDay.scans || 0}`}
           />
+          {/* Steps ring uses live-merged value from displayWeeklyData */}
           <ProgressRing
             size={92}
             progress={Math.min((selectedDay.steps || 0) / 10000, 1)}
@@ -360,9 +371,9 @@ export default function HomeDashboard() {
           />
         </View>
 
-        {/* XP level progress bar */}
+        {/* XP level bar */}
         <View style={styles.xpCard}>
-          <Text style={styles.xpTitle}>{`${currentLevel.name} • ${xp} XP`}</Text>
+          <Text style={styles.xpTitle}>{`${currentLevel.name} · ${xp} XP`}</Text>
           <View style={styles.xpBar}>
             <View style={[styles.xpFill, { width: `${Math.min(xpProgress * 100, 100)}%` }]} />
           </View>
@@ -373,7 +384,7 @@ export default function HomeDashboard() {
           </Text>
         </View>
 
-        {/*  daily challenge cards (horizontal scroll)  */}
+        {/* Daily challenge cards */}
         <View style={styles.challengeSection}>
           <Text style={styles.sectionTitle}>Daily Challenges</Text>
 
@@ -382,7 +393,7 @@ export default function HomeDashboard() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.bannerScrollContent}
           >
-            {/* challenge 1: 10K Steps */}
+            {/* 10K Steps — reads from displayWeeklyData so it's always live */}
             <Pressable
               style={styles.challengeCard}
               onPress={() => router.push("/group_challenges")}
@@ -394,15 +405,22 @@ export default function HomeDashboard() {
                   <View
                     style={[
                       styles.progressBarFill,
-                      { width: `${Math.min((selectedDay.steps || 0) / 10000 * 100, 100)}%` },
+                      {
+                        width: `${Math.min(
+                          (displayWeeklyData[6]?.steps || 0) / 10000 * 100,
+                          100
+                        )}%`,
+                      },
                     ]}
                   />
                 </View>
-                <Text style={styles.bannerBadgeText}>{selectedDay.steps || 0} / 10,000</Text>
+                <Text style={styles.bannerBadgeText}>
+                  {displayWeeklyData[6]?.steps || 0} / 10,000
+                </Text>
               </View>
             </Pressable>
 
-            {/* challenge 2: Calorie Goal */}
+            {/* Calorie Goal */}
             <Pressable
               style={styles.challengeCard}
               onPress={() => router.push("/(tabs)/calories")}
@@ -416,7 +434,9 @@ export default function HomeDashboard() {
                       styles.progressBarFill,
                       {
                         width: `${Math.min(
-                          tdee > 0 ? (selectedDay.calories || 0) / tdee * 100 : 0,
+                          tdee > 0
+                            ? (displayWeeklyData[6]?.calories || 0) / tdee * 100
+                            : 0,
                           100
                         )}%`,
                       },
@@ -424,12 +444,12 @@ export default function HomeDashboard() {
                   />
                 </View>
                 <Text style={styles.bannerBadgeText}>
-                  {selectedDay.calories || 0} / {tdee}
+                  {displayWeeklyData[6]?.calories || 0} / {tdee}
                 </Text>
               </View>
             </Pressable>
 
-            {/* challenge 3: Food Logging */}
+            {/* Food Logging */}
             <Pressable
               style={styles.challengeCard}
               onPress={() => router.push("/(tabs)/calories")}
@@ -441,22 +461,29 @@ export default function HomeDashboard() {
                   <View
                     style={[
                       styles.progressBarFill,
-                      { width: `${Math.min(((selectedDay.scans || 0) / 3) * 100, 100)}%` },
+                      {
+                        width: `${Math.min(
+                          ((displayWeeklyData[6]?.scans || 0) / 3) * 100,
+                          100
+                        )}%`,
+                      },
                     ]}
                   />
                 </View>
-                <Text style={styles.bannerBadgeText}>{selectedDay.scans || 0} / 3 meals</Text>
+                <Text style={styles.bannerBadgeText}>
+                  {displayWeeklyData[6]?.scans || 0} / 3 meals
+                </Text>
               </View>
             </Pressable>
           </ScrollView>
         </View>
 
-        {/*  weekly bar chart — tap a bar to select that day  */}
+        {/* Weekly bar chart */}
         <View style={styles.chartCard}>
           <Text style={styles.cardTitle}>This Week</Text>
 
           <View style={styles.weekChart}>
-            {weeklyData.map((item, index) => (
+            {displayWeeklyData.map((item, index) => (
               <Pressable
                 key={index}
                 style={styles.dayBarWrap}
@@ -474,24 +501,24 @@ export default function HomeDashboard() {
                             })
                           : "0%",
                       },
-                      selectedDayIndex === index && {
-                        backgroundColor: "#42564F",
-                        shadowColor: "#000",
-                        shadowOpacity: 0.2,
-                        shadowRadius: 6,
-                        elevation: 4,
-                        transform: [{ scale: 1.1 }], // 🔥 makes it grow
-                      },
+                      selectedDayIndex === index && styles.dayBarActive,
                     ]}
                   />
                 </View>
-                <Text style={styles.dayLabel}>{item.day}</Text>
+                <Text
+                  style={[
+                    styles.dayLabel,
+                    selectedDayIndex === index && styles.dayLabelActive,
+                  ]}
+                >
+                  {item.day}
+                </Text>
               </Pressable>
             ))}
           </View>
         </View>
 
-        {/*  stat grid for the selected day  */}
+        {/* Selected day stat grid */}
         <View style={styles.dayStatsCard}>
           <Text style={styles.dayStatsTitle}>{selectedDay.day || "Today"}'s Stats</Text>
 
@@ -515,27 +542,39 @@ export default function HomeDashboard() {
           </View>
         </View>
 
-        {/*  Quick-access buttons to main tabs  */}
+        {/* Quick access */}
         <View style={styles.toolsCard}>
           <Text style={styles.cardTitle}>Quick Access</Text>
 
           <View style={styles.toolsGrid}>
-            <Pressable style={styles.toolBtn} onPress={() => router.push("/(tabs)/calories")}>
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/(tabs)/calories")}
+            >
               <Ionicons name="barcode-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Calories</Text>
             </Pressable>
 
-            <Pressable style={styles.toolBtn} onPress={() => router.push("/(tabs)/workout")}>
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/(tabs)/workout")}
+            >
               <Ionicons name="barbell-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Workout</Text>
             </Pressable>
 
-            <Pressable style={styles.toolBtn} onPress={() => router.push("/group_challenges")}>
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/group_challenges")}
+            >
               <Ionicons name="walk-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Steps</Text>
             </Pressable>
 
-            <Pressable style={styles.toolBtn} onPress={() => router.push("/challenges")}>
+            <Pressable
+              style={styles.toolBtn}
+              onPress={() => router.push("/challenges")}
+            >
               <Ionicons name="trophy-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Challenges</Text>
             </Pressable>
@@ -548,21 +587,20 @@ export default function HomeDashboard() {
 }
 
 
-// STYLES
+// ── STYLES ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#DDECC8", // matches login screen hero bg
   },
 
-  // green gradient header at the top
-  headerGradient: {
+  // ── Header — same green as login hero ──────────────────────────────────────
+  header: {
+    backgroundColor: "#DDECC8",
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
 
   headerRow: {
@@ -572,14 +610,15 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    color: "#fff",
+    color: "#2F4F3E",
     fontSize: 26,
     fontWeight: "800",
   },
 
   date: {
-    color: "rgba(255,255,255,0.85)",
+    color: "#4B6354",
     marginTop: 4,
+    fontSize: 14,
   },
 
   avatar: {
@@ -591,14 +630,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(66,86,79,0.1)", // matches login heroBadge
     borderRadius: 8,
   },
 
   signOutTxt: {
-    color: "#fff",
+    color: "#42564F",
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   streakRow: {
@@ -609,7 +648,7 @@ const styles = StyleSheet.create({
   },
 
   streakPill: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(66,86,79,0.1)",
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
@@ -617,8 +656,9 @@ const styles = StyleSheet.create({
   },
 
   streakLabel: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 12,
+    color: "#2F4F3E",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   smallStats: {
@@ -626,13 +666,23 @@ const styles = StyleSheet.create({
   },
 
   smallValue: {
-    color: "#fff",
+    color: "#2F4F3E",
     fontWeight: "800",
+    fontSize: 16,
   },
 
   smallLabel: {
-    color: "rgba(255,255,255,0.9)",
+    color: "#4B6354",
     fontSize: 12,
+  },
+
+  // ── Scroll body — cream card bg, rounded top corners like login ─────────────
+  scrollBody: {
+    flex: 1,
+    backgroundColor: "#F7F6E7",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: "hidden",
   },
 
   contentContainer: {
@@ -643,9 +693,45 @@ const styles = StyleSheet.create({
   ringsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 4,
   },
 
-  //  Challenge cards 
+  // ── XP card ────────────────────────────────────────────────────────────────
+  xpCard: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 16,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8D9",
+  },
+
+  xpTitle: {
+    fontWeight: "800",
+    color: "#2F4F3E",
+    marginBottom: 6,
+  },
+
+  xpBar: {
+    height: 8,
+    backgroundColor: "#E2E8D9",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+
+  xpFill: {
+    height: "100%",
+    backgroundColor: "#42564F",
+    borderRadius: 999,
+  },
+
+  xpSub: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  // ── Challenge cards ────────────────────────────────────────────────────────
   challengeSection: {
     marginTop: 18,
   },
@@ -662,18 +748,17 @@ const styles = StyleSheet.create({
   },
 
   challengeCard: {
+    width: width * 0.62,
     marginRight: 12,
     padding: 16,
-    borderRadius: 14,
-    backgroundColor: "#EAF4DD",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    borderRadius: 16,
+    backgroundColor: "#DDECC8", // matches header / login hero
+    borderWidth: 1,
+    borderColor: "#C8DFB2",
   },
 
   bannerTextWrap: {
     flex: 1,
-    paddingRight: 12,
   },
 
   challengeCardTitle: {
@@ -689,35 +774,35 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  bannerBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#2F4F3E",
-  },
-
   progressBarTrack: {
-    marginTop: 8,
+    marginTop: 10,
+    marginBottom: 6,
     height: 10,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "rgba(66,86,79,0.12)",
     overflow: "hidden",
   },
 
   progressBarFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "#6B8A82",
+    backgroundColor: "#42564F",
   },
 
-  //  Weekly bar chart 
+  bannerBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#2F4F3E",
+  },
+
+  // ── Weekly bar chart ───────────────────────────────────────────────────────
   chartCard: {
     marginTop: 18,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8D9",
   },
 
   cardTitle: {
@@ -743,7 +828,7 @@ const styles = StyleSheet.create({
     height: 110,
     width: 18,
     borderRadius: 999,
-    backgroundColor: "#EEF3EA",
+    backgroundColor: "#E2E8D9",
     justifyContent: "flex-end",
     overflow: "hidden",
   },
@@ -755,22 +840,29 @@ const styles = StyleSheet.create({
   },
 
   dayBarActive: {
-    backgroundColor: "#42564F", // darker green for the selected day's bar
+    backgroundColor: "#42564F",
   },
 
   dayLabel: {
     marginTop: 8,
     fontSize: 12,
     color: "#6B7280",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
-  //  Selected day stat grid ─
+  dayLabelActive: {
+    color: "#42564F",
+    fontWeight: "800",
+  },
+
+  // ── Selected day stats ─────────────────────────────────────────────────────
   dayStatsCard: {
     marginTop: 16,
-    backgroundColor: "#F7F6E7",
-    borderRadius: 14,
+    backgroundColor: "#DDECC8",
+    borderRadius: 16,
     padding: 14,
+    borderWidth: 1,
+    borderColor: "#C8DFB2",
   },
 
   dayStatsTitle: {
@@ -789,10 +881,12 @@ const styles = StyleSheet.create({
   dayStatBox: {
     width: "48%",
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 12,
     alignItems: "center",
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8D9",
   },
 
   dayStatValue: {
@@ -808,12 +902,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  //  quick access buttons 
+  // ── Quick access ───────────────────────────────────────────────────────────
   toolsCard: {
     marginTop: 14,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E2E8D9",
   },
 
   toolsGrid: {
@@ -827,47 +923,17 @@ const styles = StyleSheet.create({
     width: "48%",
     marginBottom: 12,
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.cardBgLight,
+    borderRadius: 14,
+    backgroundColor: "#F7F6E7",
     alignItems: "center",
     gap: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8D9",
   },
 
   toolText: {
     fontWeight: "700",
     color: "#2F4F3E",
     textAlign: "center",
-  },
-
-  //  XP level bar 
-  xpCard: {
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 14,
-    marginTop: 14,
-  },
-
-  xpTitle: {
-    fontWeight: "800",
-    color: "#2F4F3E",
-    marginBottom: 6,
-  },
-
-  xpBar: {
-    height: 8,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-
-  xpFill: {
-    height: "100%",
-    backgroundColor: "#6B8A82",
-  },
-
-  xpSub: {
-    marginTop: 6,
-    fontSize: 12,
-    color: "#6B7280",
   },
 });

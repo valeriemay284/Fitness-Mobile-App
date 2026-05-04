@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Pedometer } from "expo-sensors";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://:8080/api";
+const API_BASE_URL = "http://10.41.217.81:8080/api";
 
 const GROUP_CHALLENGE = {
   id: 1,

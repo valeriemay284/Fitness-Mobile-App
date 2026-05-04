@@ -2,10 +2,10 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Update this to your development machine LAN IP if needed.
-const DEFAULT_LAN = '10.41.81.30';
+const DEFAULT_LAN = '10.41.217.81';
 
-const LOCALHOST = `http://192.168.1.79:8080`;
-const ANDROID_EMULATOR = `http://192.168.1.79:8080`;
+const LOCALHOST = `http://10.41.217.81:8080`;
+const ANDROID_EMULATOR = `http://10.41.217.81:8080`;
 const LAN = `http://${DEFAULT_LAN}:8080`;
 
 export const API_BASE = Platform.OS === 'android' && !Constants.isDevice ? ANDROID_EMULATOR : Platform.OS === 'web' ? LOCALHOST : LAN;

@@ -9,14 +9,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import colors from "../../constants/colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-//  types 
-
+// types
 type MuscleGroup = "All" | "Chest" | "Legs" | "Core" | "Arms";
-
-//  static data 
 
 const muscleGroups: MuscleGroup[] = ["All", "Chest", "Legs", "Core", "Arms"];
 
@@ -56,344 +52,183 @@ const workouts = [
   },
 ];
 
-//component 
 export default function Workout() {
-  // currently selected muscle group filter
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup>("All");
-
-  // currently selected workout from the list
   const [selectedWorkout, setSelectedWorkout] = useState(workouts[0]);
-
-  // timer state
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
-  // animated value used for the pulsing timer text
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // filter workout list based on selected muscle group
   const filteredWorkouts =
     selectedGroup === "All"
       ? workouts
-      : workouts.filter((workout) => workout.group === selectedGroup);
+      : workouts.filter((w) => w.group === selectedGroup);
 
-  //  timer interval 
-  // increments seconds every 1000ms while the timer is running
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
+    let interval: any;
     if (isRunning) {
-      interval = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setSeconds((s) => s + 1), 1000);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [isRunning]);
 
-  //  pulse animation 
-  // loops a subtle scale bounce on the timer text while running
   useEffect(() => {
-    let animation: Animated.CompositeAnimation | null = null;
-
     if (isRunning) {
-      animation = Animated.loop(
+      Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.06,
-            duration: 700,
+            toValue: 1.05,
+            duration: 600,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 700,
+            duration: 600,
             useNativeDriver: true,
           }),
         ])
-      );
-
-      animation.start();
+      ).start();
     } else {
-      // snap back to normal scale when paused or stopped
-      pulseAnim.stopAnimation();
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      pulseAnim.setValue(1);
     }
+  }, [isRunning]);
 
-    return () => {
-      if (animation) animation.stop();
-    };
-  }, [isRunning, pulseAnim]);
-
-  //  helpers 
-
-  // converts raw seconds into mm:ss display format
-  const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins < 10 ? `0${mins}` : mins}:${secs < 10 ? `0${secs}` : secs}`;
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m < 10 ? "0" : ""}${m}:${sec < 10 ? "0" : ""}${sec}`;
   };
 
-  // resets the timer and logs the workout start to async storage
-  const startSelectedWorkout = async () => {
+  const startWorkout = async () => {
     setSeconds(0);
     setIsRunning(true);
 
-    // persist a workout count keyed by today's date
     const today = new Date().toISOString().split("T")[0];
-    const key = `workouts_user`;
+    const key = "workouts_user";
 
-    try {
-      const existing = await AsyncStorage.getItem(key);
-      const parsed = existing ? JSON.parse(existing) : {};
+    const existing = await AsyncStorage.getItem(key);
+    const parsed = existing ? JSON.parse(existing) : {};
+    parsed[today] = (parsed[today] || 0) + 1;
 
-      parsed[today] = (parsed[today] || 0) + 1;
-
-      await AsyncStorage.setItem(key, JSON.stringify(parsed));
-    } catch (e) {
-      console.log("workout save error", e);
-    }
+    await AsyncStorage.setItem(key, JSON.stringify(parsed));
   };
 
-  //  render 
-
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["top"]}
-    >
-      <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#DDECC8" }}>
+      
+      {/* HERO */}
+      <View style={styles.hero}>
+        <Text style={styles.heroBadge}>WORKOUT</Text>
+        <Text style={styles.heroTitle}>Let’s train 💪</Text>
+        <Text style={styles.heroSub}>
+          Pick an exercise and track your progress
+        </Text>
+      </View>
 
-        {/* page header */}
-        <View style={styles.headerBlock}>
-          <Text style={[styles.title, { color: colors.text }]}>Workout</Text>
-          <Text style={[styles.subtitle, { color: colors.text }]}>
-            Pick a muscle group, choose an exercise, and track your session.
-          </Text>
-        </View>
-
+      {/* MAIN CARD */}
+      <View style={styles.card}>
         <ScrollView showsVerticalScrollIndicator={false}>
 
-          {/*  timer card  */}
-          <View style={[styles.timerCard, { backgroundColor: colors.cardBg }]}>
-            <Text style={[styles.timerLabel, { color: colors.primaryDark }]}>
+          {/* TIMER */}
+          <View style={styles.timerCard}>
+            <Text style={styles.timerLabel}>
               {selectedWorkout.name} Timer
             </Text>
 
-            {/* animated timer display */}
             <Animated.Text
-              style={[
-                styles.timerText,
-                {
-                  color: colors.text,
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
+              style={[styles.timerText, { transform: [{ scale: pulseAnim }] }]}
             >
               {formatTime(seconds)}
             </Animated.Text>
 
-            {/* start / pause and reset controls */}
-            <View style={styles.timerButtonRow}>
+            <View style={styles.row}>
               <TouchableOpacity
-                style={[styles.timerButton, { backgroundColor: colors.primaryDark }]}
-                onPress={() => setIsRunning((prev) => !prev)}
-                activeOpacity={0.85}
+                style={styles.primaryBtn}
+                onPress={() => setIsRunning(!isRunning)}
               >
-                <Text style={styles.timerButtonText}>
+                <Text style={styles.btnText}>
                   {isRunning ? "Pause" : "Start"}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.timerButton,
-                  { backgroundColor: colors.cardBgLight || "#dfe6d8" },
-                ]}
+                style={styles.secondaryBtn}
                 onPress={() => {
                   setIsRunning(false);
                   setSeconds(0);
                 }}
-                activeOpacity={0.85}
               >
-                <Text style={[styles.resetButtonText, { color: colors.text }]}>
-                  Reset
-                </Text>
+                <Text style={styles.secondaryText}>Reset</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/*  muscle group filter chips  */}
-          <Text style={[styles.sectionLabel, { color: colors.text }]}>
-            Target Muscle
-          </Text>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRow}
-          >
-            {muscleGroups.map((group) => {
-              const active = selectedGroup === group;
-
+          {/* FILTER */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {muscleGroups.map((g) => {
+              const active = g === selectedGroup;
               return (
                 <TouchableOpacity
-                  key={group}
+                  key={g}
                   style={[
                     styles.chip,
-                    {
-                      backgroundColor: active
-                        ? colors.primaryDark
-                        : colors.cardBg,
-                    },
+                    { backgroundColor: active ? "#42564F" : "#fff" },
                   ]}
-                  onPress={() => {
-                    setSelectedGroup(group);
-
-                    // auto-select the first workout in the chosen group
-                    const firstMatch =
-                      group === "All"
-                        ? workouts[0]
-                        : workouts.find((workout) => workout.group === group);
-
-                    if (firstMatch) setSelectedWorkout(firstMatch);
-                  }}
+                  onPress={() => setSelectedGroup(g)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: active ? "#fff" : colors.text },
-                    ]}
-                  >
-                    {group}
+                  <Text style={{ color: active ? "#fff" : "#2F4F3E" }}>
+                    {g}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          {/*  workout list  */}
-          <View style={styles.listContainer}>
-            {filteredWorkouts.map((workout) => {
-              const isSelected = selectedWorkout.id === workout.id;
-
-              return (
-                <TouchableOpacity
-                  key={workout.id}
-                  style={[
-                    styles.workoutButton,
-                    {
-                      backgroundColor: isSelected
-                        ? colors.primaryDark
-                        : colors.cardBg,
-                    },
-                  ]}
-                  onPress={() => setSelectedWorkout(workout)}
-                  activeOpacity={0.85}
+          {/* LIST */}
+          {filteredWorkouts.map((w) => {
+            const selected = w.id === selectedWorkout.id;
+            return (
+              <TouchableOpacity
+                key={w.id}
+                style={[
+                  styles.workout,
+                  { backgroundColor: selected ? "#42564F" : "#fff" },
+                ]}
+                onPress={() => setSelectedWorkout(w)}
+              >
+                <Text
+                  style={{
+                    fontWeight: "800",
+                    color: selected ? "#fff" : "#2F4F3E",
+                  }}
                 >
-                  <View style={styles.workoutTopRow}>
-                    <Text
-                      style={[
-                        styles.workoutButtonText,
-                        { color: isSelected ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {workout.name}
-                    </Text>
+                  {w.name}
+                </Text>
+                <Text
+                  style={{
+                    color: selected ? "#eee" : "#4B6354",
+                  }}
+                >
+                  {w.target}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
 
-                    {/* difficulty badge */}
-                    <Text
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: isSelected ? "#ffffff25" : "#e9ece4",
-                          color: isSelected ? "#fff" : colors.primaryDark,
-                        },
-                      ]}
-                    >
-                      {workout.difficulty}
-                    </Text>
-                  </View>
-
-                  <Text
-                    style={[
-                      styles.workoutTarget,
-                      { color: isSelected ? "#eef3ee" : colors.text },
-                    ]}
-                  >
-                    {workout.target}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.workoutMeta,
-                      { color: isSelected ? "#eef3ee" : colors.text },
-                    ]}
-                  >
-                    {workout.equipment} • {workout.sets}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/*  selected workout detail card  */}
-          <View style={[styles.card, { backgroundColor: colors.cardBg }]}>
-            <Text style={[styles.cardTitle, { color: colors.primaryDark }]}>
+          {/* DETAIL */}
+          <View style={styles.detail}>
+            <Text style={styles.detailTitle}>
               {selectedWorkout.name}
             </Text>
 
-            <Text style={[styles.cardSubtitle, { color: colors.text }]}>
-              Target: {selectedWorkout.target}
-            </Text>
+            <Image source={selectedWorkout.demo} style={styles.img} />
 
-            {/* difficulty, equipment, and set info pills */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailPill}>
-                <Text style={styles.detailText}>{selectedWorkout.difficulty}</Text>
-              </View>
-              <View style={styles.detailPill}>
-                <Text style={styles.detailText}>{selectedWorkout.equipment}</Text>
-              </View>
-              <View style={styles.detailPill}>
-                <Text style={styles.detailText}>{selectedWorkout.sets}</Text>
-              </View>
-            </View>
-
-            {/* animated gif demo */}
-            <View style={styles.demoWrap}>
-              <Image
-                source={selectedWorkout.demo}
-                style={styles.demo}
-                resizeMode="contain"
-              />
-            </View>
-
-            {/* starts the timer and logs the workout */}
-            <TouchableOpacity
-              style={[styles.startWorkoutBtn, { backgroundColor: colors.primaryDark }]}
-              onPress={startSelectedWorkout}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.timerButtonText}>
-                Start {selectedWorkout.name}
-              </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={startWorkout}>
+              <Text style={styles.btnText}>Start Workout</Text>
             </TouchableOpacity>
 
-            {/* form tip for the selected workout */}
-            <View style={styles.tipBlock}>
-              <Text style={[styles.tipLabel, { color: colors.primaryDark }]}>
-                Quick Tip
-              </Text>
-              <Text style={[styles.tipText, { color: colors.text }]}>
-                {selectedWorkout.tip}
-              </Text>
-            </View>
+            <Text style={styles.tip}>{selectedWorkout.tip}</Text>
           </View>
 
         </ScrollView>
@@ -402,183 +237,117 @@ export default function Workout() {
   );
 }
 
-//  styles 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+  hero: {
+    alignItems: "center",
+    paddingTop: 30,
+    paddingBottom: 10,
   },
-  headerBlock: {
-    marginBottom: 18,
-  },
-  title: {
-    fontSize: 32,
+  heroBadge: {
+    backgroundColor: "rgba(66,86,79,0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     fontWeight: "800",
-    marginBottom: 6,
+    color: "#42564F",
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    lineHeight: 24,
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#2F4F3E",
   },
+  heroSub: {
+    color: "#4B6354",
+    fontSize: 14,
+  },
+
+  card: {
+    flex: 1,
+    backgroundColor: "#F7F6E7",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 20,
+  },
+
   timerCard: {
-    padding: 18,
-    borderRadius: 24,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
   timerLabel: {
-    fontSize: 17,
     fontWeight: "800",
-    marginBottom: 8,
+    color: "#42564F",
   },
   timerText: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: "900",
-    marginBottom: 14,
+    marginVertical: 10,
+    color: "#2F4F3E",
   },
-  timerButtonRow: {
+
+  row: {
     flexDirection: "row",
     gap: 10,
   },
-  timerButton: {
+
+  primaryBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
+    backgroundColor: "#42564F",
+    padding: 14,
+    borderRadius: 14,
     alignItems: "center",
   },
-  timerButtonText: {
+  btnText: {
     color: "#fff",
-    fontSize: 16,
     fontWeight: "800",
   },
-  resetButtonText: {
-    fontSize: 16,
-    fontWeight: "800",
+
+  secondaryBtn: {
+    flex: 1,
+    backgroundColor: "#E2E8D9",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
   },
-  sectionLabel: {
-    fontSize: 18,
+  secondaryText: {
     fontWeight: "800",
+    color: "#2F4F3E",
+  },
+
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 15,
+  },
+
+  workout: {
+    padding: 16,
+    borderRadius: 18,
     marginBottom: 10,
   },
-  chipRow: {
-    gap: 10,
-    paddingBottom: 16,
+
+  detail: {
+    marginTop: 20,
   },
-  chip: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
+  detailTitle: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#2F4F3E",
+    marginBottom: 10,
   },
-  chipText: {
-    fontWeight: "800",
-  },
-  listContainer: {
-    marginBottom: 20,
-  },
-  workoutButton: {
-    padding: 18,
-    borderRadius: 22,
+
+  img: {
+    width: "100%",
+    height: 200,
     marginBottom: 12,
   },
-  workoutTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  workoutButtonText: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  badge: {
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  workoutTarget: {
-    fontSize: 15,
-    marginTop: 8,
-    opacity: 0.9,
-    lineHeight: 20,
-  },
-  workoutMeta: {
-    fontSize: 13,
-    marginTop: 6,
-    opacity: 0.8,
-    fontWeight: "600",
-  },
-  card: {
-    padding: 20,
-    borderRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-    marginBottom: 24,
-  },
-  cardTitle: {
-    fontSize: 36,
-    fontWeight: "900",
-  },
-  cardSubtitle: {
-    fontSize: 17,
-    opacity: 0.82,
-    lineHeight: 24,
-    marginTop: 6,
-  },
-  detailRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 14,
-    marginBottom: 16,
-  },
-  detailPill: {
-    backgroundColor: "#e9ece4",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  detailText: {
-    color: "#2f6f46",
-    fontWeight: "800",
-    fontSize: 12,
-  },
-  demoWrap: {
-    width: "100%",
-    borderRadius: 18,
-    overflow: "hidden",
-    marginBottom: 14,
-  },
-  demo: {
-    width: "100%",
-    height: 240,
-    backgroundColor: "#e9ece4",
-  },
-  startWorkoutBtn: {
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  tipBlock: {
-    paddingTop: 2,
-  },
-  tipLabel: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 15,
-    lineHeight: 22,
+
+  tip: {
+    marginTop: 10,
+    color: "#4B6354",
   },
 });
