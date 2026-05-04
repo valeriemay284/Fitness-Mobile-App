@@ -1,7 +1,7 @@
 /**
  * Module: Settings Screen
  * Date: 2026-04-17
- * Programmer: Group 4
+ * Programmer: Group 5
  *
  * Description:
  *   The Settings screen allows authenticated users to view and update

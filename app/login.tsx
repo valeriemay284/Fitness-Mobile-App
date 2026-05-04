@@ -122,7 +122,7 @@ export default function LoginScreen() {
             </Text>
 
             <Image
-              source={require("../assets/panda.png")}
+              source={require("../assets/panda-run.png")}
               style={styles.panda}
               resizeMode="contain"
             />
@@ -268,9 +268,10 @@ const styles = StyleSheet.create({
   heroWrap: {
     backgroundColor: "#DDECC8",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     height: 280,
     paddingHorizontal: 24,
+    paddingTop: 30, 
     position: "relative",
     overflow: "hidden",
   },
@@ -308,10 +309,10 @@ const styles = StyleSheet.create({
   },
 
   panda: {
-    width: 170,
-    height: 170,
+    width: 150,
+    height: 150,
     alignSelf: "center",
-    marginBottom: -38,
+    marginTop: -15, 
   },
 
   card: {

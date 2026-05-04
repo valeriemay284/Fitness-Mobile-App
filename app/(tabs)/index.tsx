@@ -1,5 +1,7 @@
 // @ts-nocheck
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -16,7 +18,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../components/AuthContext";
 import ProgressRing from "../../components/ProgressRing";
-import WeeklyChart from "../../components/WeeklyChart";
 import colors from "../../constants/colors";
 
 const { width } = Dimensions.get("window");
@@ -26,12 +27,25 @@ const GROUP_CHALLENGE_GOAL = 100000;
 const GROUP_TOTAL_KEY = "group_challenge_total_steps_demo";
 const GROUP_LAST_UPDATED_KEY = "group_challenge_last_updated_demo";
 
+const weeklyDemoData = [
+  { day: "Mon", workouts: 1, calories: 430, steps: 6240, scans: 2, progress: 0.55 },
+  { day: "Tue", workouts: 0, calories: 210, steps: 3820, scans: 1, progress: 0.35 },
+  { day: "Wed", workouts: 1, calories: 510, steps: 7200, scans: 3, progress: 0.7 },
+  { day: "Thu", workouts: 0, calories: 180, steps: 2950, scans: 1, progress: 0.28 },
+  { day: "Fri", workouts: 1, calories: 620, steps: 8100, scans: 4, progress: 0.82 },
+  { day: "Sat", workouts: 2, calories: 750, steps: 10150, scans: 5, progress: 1 },
+  { day: "Sun", workouts: 0, calories: 300, steps: 4600, scans: 2, progress: 0.45 },
+];
+
 export default function HomeDashboard() {
   const { user, signOut } = useAuth();
   const router = useRouter();
 
   const [groupTotalSteps, setGroupTotalSteps] = useState(0);
   const [groupLastUpdated, setGroupLastUpdated] = useState("--");
+  const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
+
+  const selectedDay = weeklyDemoData[selectedDayIndex];
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -75,13 +89,8 @@ export default function HomeDashboard() {
         AsyncStorage.getItem(GROUP_LAST_UPDATED_KEY),
       ]);
 
-      if (storedTotal) {
-        setGroupTotalSteps(Number(storedTotal));
-      }
-
-      if (storedLastUpdated) {
-        setGroupLastUpdated(storedLastUpdated);
-      }
+      if (storedTotal) setGroupTotalSteps(Number(storedTotal));
+      if (storedLastUpdated) setGroupLastUpdated(storedLastUpdated);
     } catch (error) {
       console.log("Error loading group challenge banner:", error);
     }
@@ -106,7 +115,7 @@ export default function HomeDashboard() {
 
           <View style={{ alignItems: "center" }}>
             <Image
-              source={require("../../assets/panda.png")}
+              source={require("../../assets/panda-stretch.png")}
               style={styles.avatar}
             />
 
@@ -194,7 +203,7 @@ export default function HomeDashboard() {
                 styles.groupCard,
                 { width: BANNER_WIDTH },
               ]}
-              onPress={() => router.push("/group_challenges")}
+              onPress={() => router.push("/group-challenge")}
             >
               <View style={styles.bannerTextWrap}>
                 <Text style={styles.challengeCardTitle}>Group Challenge</Text>
@@ -237,8 +246,71 @@ export default function HomeDashboard() {
         </View>
 
         <View style={styles.chartCard}>
-          <Text style={styles.cardTitle}>This Week</Text>
-          <WeeklyChart style={{ marginTop: 8 }} />
+          <View style={styles.chartHeader}>
+            <Text style={styles.cardTitle}>This Week</Text>
+            <Text style={styles.chartHint}>Tap a day</Text>
+          </View>
+
+          <View style={styles.weekChart}>
+            {weeklyDemoData.map((item, index) => (
+              <Pressable
+                key={item.day}
+                style={styles.dayBarWrap}
+                onPress={() => setSelectedDayIndex(index)}
+              >
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.dayBar,
+                      {
+                        height: `${item.progress * 100}%`,
+                      },
+                      selectedDayIndex === index && styles.dayBarActive,
+                    ]}
+                  />
+                </View>
+
+                <Text
+                  style={[
+                    styles.dayLabel,
+                    selectedDayIndex === index && styles.dayLabelActive,
+                  ]}
+                >
+                  {item.day}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.dayStatsCard}>
+            <Text style={styles.dayStatsTitle}>{selectedDay.day}'s Stats</Text>
+
+            <View style={styles.dayStatsGrid}>
+              <View style={styles.dayStatBox}>
+                <Text style={styles.dayStatValue}>{selectedDay.workouts}</Text>
+                <Text style={styles.dayStatLabel}>Workouts</Text>
+              </View>
+
+              <View style={styles.dayStatBox}>
+                <Text style={styles.dayStatValue}>
+                  {selectedDay.calories}
+                </Text>
+                <Text style={styles.dayStatLabel}>Calories</Text>
+              </View>
+
+              <View style={styles.dayStatBox}>
+                <Text style={styles.dayStatValue}>
+                  {selectedDay.steps.toLocaleString()}
+                </Text>
+                <Text style={styles.dayStatLabel}>Steps</Text>
+              </View>
+
+              <View style={styles.dayStatBox}>
+                <Text style={styles.dayStatValue}>{selectedDay.scans}</Text>
+                <Text style={styles.dayStatLabel}>Food Scans</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         <View style={styles.toolsCard}>
@@ -249,27 +321,31 @@ export default function HomeDashboard() {
               style={styles.toolBtn}
               onPress={() => router.push("/(tabs)/workout")}
             >
+              <Ionicons name="barbell-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Start Workout</Text>
             </Pressable>
 
             <Pressable
               style={styles.toolBtn}
-              onPress={() => router.push("/(tabs)/calories")}
+              onPress={() => router.push("/calories")}
             >
-              <Text style={styles.toolText}>Log Calories</Text>
+              <Ionicons name="barcode-outline" size={22} color="#42564F" />
+              <Text style={styles.toolText}>Calories</Text>
             </Pressable>
 
             <Pressable
               style={styles.toolBtn}
               onPress={() => router.push("/challenges")}
             >
+              <Ionicons name="trophy-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Challenges</Text>
             </Pressable>
 
             <Pressable
               style={styles.toolBtn}
-              onPress={() => router.push("/group_challenges")}
+              onPress={() => router.push("/group-challenge")}
             >
+              <Ionicons name="people-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Group Challenge</Text>
             </Pressable>
           </View>
@@ -494,9 +570,107 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
+  chartHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  chartHint: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
   cardTitle: {
     fontWeight: "800",
     fontSize: 16,
+    color: "#2F4F3E",
+  },
+
+  weekChart: {
+    marginTop: 18,
+    height: 150,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+
+  dayBarWrap: {
+    alignItems: "center",
+    width: `${100 / 7}%`,
+  },
+
+  barTrack: {
+    height: 110,
+    width: 18,
+    borderRadius: 999,
+    backgroundColor: "#EEF3EA",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+
+  dayBar: {
+    width: "100%",
+    borderRadius: 999,
+    backgroundColor: "#AFC79B",
+  },
+
+  dayBarActive: {
+    backgroundColor: "#42564F",
+  },
+
+  dayLabel: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "700",
+  },
+
+  dayLabelActive: {
+    color: "#2F4F3E",
+  },
+
+  dayStatsCard: {
+    marginTop: 16,
+    backgroundColor: "#F7F6E7",
+    borderRadius: 14,
+    padding: 14,
+  },
+
+  dayStatsTitle: {
+    fontWeight: "800",
+    fontSize: 15,
+    color: "#2F4F3E",
+    marginBottom: 12,
+  },
+
+  dayStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  dayStatBox: {
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  dayStatValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#42564F",
+  },
+
+  dayStatLabel: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "600",
   },
 
   toolsCard: {
@@ -516,13 +690,16 @@ const styles = StyleSheet.create({
   toolBtn: {
     width: "48%",
     marginBottom: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: colors.cardBgLight,
     alignItems: "center",
+    gap: 6,
   },
 
   toolText: {
     fontWeight: "700",
+    color: "#2F4F3E",
+    textAlign: "center",
   },
 });

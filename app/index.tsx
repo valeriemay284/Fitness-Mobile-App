@@ -63,7 +63,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {/* Animated panda lifting effect */}
       <Animated.Image
-        source={require("../assets/panda.png")} // Image path
+        source={require("../assets/panda-weight.png")} // Image path
         style={[styles.panda, { transform: [{ translateY: liftAnim }] }]}
         resizeMode="contain"
       />

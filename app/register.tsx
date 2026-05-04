@@ -1,18 +1,10 @@
 // @ts-nocheck
 
-/**
- * RegisterScreen
- *
- * Screen for creating a new account. Collects username, email, password,
- * and confirm password. Validates inputs, calls the backend to create the
- * login record, and on success forwards the user to the User Info Screen
- * to complete their profile.
- */
-
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -157,6 +149,12 @@ export default function RegisterScreen() {
             <View style={styles.heroBlobLeft} />
             <View style={styles.heroBlobRight} />
 
+            <Image
+              source={require("../assets/panda-welcome.png")}
+              style={styles.panda}
+              resizeMode="contain"
+            />
+
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>Welcome!</Text>
             </View>
@@ -179,7 +177,6 @@ export default function RegisterScreen() {
               Create your login to continue.
             </Text>
 
-            {/* Username */}
             <View style={[formStyles.inputWrap, styles.inputWrapCustom]}>
               <Ionicons
                 name="person-outline"
@@ -198,7 +195,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Email */}
             <View
               style={[formStyles.inputWrap, styles.inputWrapCustom, styles.mt12]}
             >
@@ -222,7 +218,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Password */}
             <View
               style={[formStyles.inputWrap, styles.inputWrapCustom, styles.mt12]}
             >
@@ -255,7 +250,6 @@ export default function RegisterScreen() {
               </Pressable>
             </View>
 
-            {/* Confirm Password */}
             <View
               style={[formStyles.inputWrap, styles.inputWrapCustom, styles.mt12]}
             >
@@ -340,11 +334,21 @@ const styles = StyleSheet.create({
   heroWrap: {
     backgroundColor: "#DDECC8",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-change",
     height: 230,
+    paddingTop: 6,
     paddingHorizontal: 24,
     position: "relative",
     overflow: "hidden",
+  },
+
+  panda: {
+    position: "absolute",
+    right: 115,
+    bottom: -35,
+    width: 150,
+    height: 150,
+    opacity: 0.95,
   },
 
   heroBadge: {
