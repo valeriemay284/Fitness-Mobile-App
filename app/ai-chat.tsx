@@ -16,7 +16,7 @@ import {
 import { useAuth } from "../components/AuthContext";
 import colors from "../constants/colors";
 
-const API_URL = "http://192.168.24.11:8080/api/talk";
+const API_URL = "http://:8080/api/talk";
 
 interface Message {
   id: string;

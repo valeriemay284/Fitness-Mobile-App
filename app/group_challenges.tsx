@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Pedometer } from "expo-sensors";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://10.41.221.154:8080/api";
+const API_BASE_URL = "http://:8080/api";
 
 const GROUP_CHALLENGE = {
   id: 1,
@@ -156,10 +156,27 @@ export default function GroupChallengesScreen() {
 
       const result = await Pedometer.getStepCountAsync(start, new Date());
       setTodaySteps(result.steps || 0);
-
-      pedometerSub.current = Pedometer.watchStepCount((result) => {
-        setTodaySteps(pedometerBaseRef.current + watchedSteps);
+      
+      pedometerSub.current = Pedometer.watchStepCount(async (result) => {
+        const steps = result.steps;
+        setTodaySteps(steps);
+      
+        // SAVE TO GLOBAL STORAGE (so dashboard can see it)
+        const today = new Date().toISOString().split("T")[0];
+        const key = `steps_${username || "guest"}`;
+      
+        try {
+          const existing = await AsyncStorage.getItem(key);
+          const parsed = existing ? JSON.parse(existing) : {};
+      
+          parsed[today] = steps;
+      
+          await AsyncStorage.setItem(key, JSON.stringify(parsed));
+        } catch (e) {
+          console.log("step sync error", e);
+        }
       });
+      
     } catch (error) {
       console.log("Pedometer error:", error);
       setPedometerAvailable(false);

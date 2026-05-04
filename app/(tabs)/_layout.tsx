@@ -1,17 +1,15 @@
-//This folder contains the screens that should appear in the bottom tab bar
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import colors from "../../constants/colors";
 
+
 export default function TabLayout() {
   return (
-    // The bottom tab navigator for the app
     <Tabs
       screenOptions={{
-        headerShown: false, // hide header for all tabs
-        tabBarActiveTintColor: colors.primary, // active icon/text color
+        headerShown: false,
+        tabBarActiveTintColor: colors?.primary || "#7AC47D",
 
-        // styling for the bottom tab bar
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopWidth: 0,
@@ -19,12 +17,9 @@ export default function TabLayout() {
           paddingBottom: 12,
         },
 
-        // label under each icon
         tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
       }}
     >
-
-      {/* Home tab */}
       <Tabs.Screen
         name="index"
         options={{
@@ -35,7 +30,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Workout tab */}
       <Tabs.Screen
         name="workout"
         options={{
@@ -46,7 +40,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Calories tab */}
       <Tabs.Screen
         name="calories"
         options={{
@@ -57,7 +50,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Settings tab */}
       <Tabs.Screen
         name="settings"
         options={{
@@ -68,14 +60,12 @@ export default function TabLayout() {
         }}
       />
 
-
-       {/* Forum tab */}
-       <Tabs.Screen
-          name="Forum"
-          options={{
-           title: "Forum",
-            tabBarIcon: ({ color, size }) => (
-             <Ionicons name="text-outline" size={size} color={color} />
+      <Tabs.Screen
+        name="forum"
+        options={{
+          title: "Forum",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
         }}
       />

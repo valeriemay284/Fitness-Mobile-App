@@ -1,82 +1,186 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
 import ResetPasswordForm from "../components/ResetPasswordForm";
 import SendCodeForm from "../components/SendCodeForm";
 import colors from "../constants/colors";
+import formStyles from "../constants/formStyles";
 
 export default function ForgotPasswordScreen() {
-  // Stores the user's email/ID input
+  const insets = useSafeAreaInsets();
+
   const [id, setId] = useState("");
-
-  // Controls which step the user is on (send code → reset password)
   const [codeSent, setCodeSent] = useState(false);
-
-  // Allows the child components to toggle a loading state
   const [loading, setLoading] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.screen}>
 
-        {/* Navigation back to login */}
-        <Text
-          style={{ color: colors.primaryDark, fontWeight: "600", marginBottom: 20 }}
-          onPress={() => router.back()}
-        >
-          ← Back to Login
-        </Text>
+          {/* 🔝 HERO SECTION (same as login) */}
+          <View style={styles.heroWrap}>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>Account Help</Text>
+            </View>
 
-        {/* Screen heading */}
-        <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.heroTitle}>Forgot your password?</Text>
 
-        {/* Step 1: Enter ID + Send Code 
-            Step 2: Enter Code + New Password */}
-        {!codeSent ? (
-          <SendCodeForm
-            id={id}
-            setId={setId}
-            onCodeSent={() => setCodeSent(true)}
-            setLoading={setLoading}
+            <Text style={styles.heroSubtitle}>
+              Enter your username and we’ll send you a code to reset your password.
+            </Text>
+
+            <Image
+              source={require("../assets/panda-run.png")}
+              style={styles.panda}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* 🔽 CARD SECTION */}
+          <View
+            style={[
+              formStyles.card,
+              styles.card,
+              { paddingBottom: 20 + insets.bottom },
+            ]}
+          >
+            {/* back button */}
+            <Text
+              style={styles.back}
+              onPress={() => router.back()}
+            >
+              ← Back to Login
+            </Text>
+
+            <Text style={styles.cardTitle}>Reset Password</Text>
+
+            {!codeSent ? (
+              <SendCodeForm
+                id={id}
+                setId={setId}
+                onCodeSent={() => setCodeSent(true)}
+                setLoading={setLoading}
+              />
+            ) : (
+              <ResetPasswordForm
+                id={id}
+                setLoading={setLoading}
+              />
+            )}
+
+            {loading && (
+              <Text style={styles.loading}>Loading...</Text>
+            )}
+          </View>
+
+          {/* bottom safe area fill */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: insets.bottom,
+              backgroundColor: "#F7F6E7",
+            }}
           />
-        ) : (
-          <ResetPasswordForm
-            id={id}
-            setLoading={setLoading}
-          />
-        )}
-
-        {/* Shows a generic loading message (optional, controlled by child forms) */}
-        {loading && (
-          <Text style={{ textAlign: "center", marginTop: 10, color: colors.textMuted }}>
-            Loading...
-          </Text>
-        )}
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-// --- Styles ---
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: colors.primaryDark,
-    justifyContent: "center",
-    padding: 20,
+    backgroundColor: "#DDECC8",
   },
-  card: {
-    backgroundColor: colors.cardBg,
-    borderRadius: 20,
-    padding: 20,
-    elevation: 4,
+
+  screen: {
+    flex: 1,
+    backgroundColor: "#DDECC8",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: colors.primaryDark,
-    marginBottom: 20,
+
+  heroWrap: {
+    backgroundColor: "#DDECC8",
+    alignItems: "center",
+    height: 280,
+    paddingHorizontal: 24,
+    paddingTop: 30,
+  },
+
+  heroBadge: {
+    backgroundColor: "rgba(66,86,79,0.1)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginBottom: 14,
+  },
+
+  heroBadgeText: {
+    color: "#42564F",
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#2F4F3E",
+    marginBottom: 8,
+  },
+
+  heroSubtitle: {
+    fontSize: 14,
+    color: "#4B6354",
     textAlign: "center",
+    maxWidth: 290,
+    marginBottom: 8,
+  },
+
+  panda: {
+    width: 140,
+    height: 140,
+    marginTop: -10,
+  },
+
+  card: {
+    backgroundColor: "#F7F6E7",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+  },
+
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#2F4F3E",
+    marginBottom: 10,
+  },
+
+  back: {
+    color: "#42564F",
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  loading: {
+    textAlign: "center",
+    marginTop: 10,
+    color: "#6B7280",
   },
 });

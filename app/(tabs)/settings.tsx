@@ -184,7 +184,7 @@ export default function Settings() {
       };
 
       // Assuming an update endpoint exists, or use the same endpoint with a different method
-      const response = await fetch("http://192.168.1.20:8080/api/updatePhysicalStats", {
+      const response = await fetch("http://:8080/api/updatePhysicalStats", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

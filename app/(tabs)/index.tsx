@@ -1,9 +1,12 @@
 // @ts-nocheck
+// HomeDashboard — Main screen users see after login.
+// Shows daily stats, weekly chart, challenges, XP level, and quick nav.
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Pedometer } from "expo-sensors";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -18,70 +21,160 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../components/AuthContext";
 import ProgressRing from "../../components/ProgressRing";
+import { useStreak } from "../../components/useStreak";
 import colors from "../../constants/colors";
 
+//constants
 const { width } = Dimensions.get("window");
 const BANNER_WIDTH = width - 40;
 
-const GROUP_CHALLENGE_GOAL = 100000;
+const GROUP_CHALLENGE_GOAL = 100000;          // Total steps goal for group challenge
 const GROUP_TOTAL_KEY = "group_challenge_total_steps_demo";
 const GROUP_LAST_UPDATED_KEY = "group_challenge_last_updated_demo";
 
-const weeklyDemoData = [
-  { day: "Mon", workouts: 1, calories: 430, steps: 6240, scans: 2, progress: 0.55 },
-  { day: "Tue", workouts: 0, calories: 210, steps: 3820, scans: 1, progress: 0.35 },
-  { day: "Wed", workouts: 1, calories: 510, steps: 7200, scans: 3, progress: 0.7 },
-  { day: "Thu", workouts: 0, calories: 180, steps: 2950, scans: 1, progress: 0.28 },
-  { day: "Fri", workouts: 1, calories: 620, steps: 8100, scans: 4, progress: 0.82 },
-  { day: "Sat", workouts: 2, calories: 750, steps: 10150, scans: 5, progress: 1 },
-  { day: "Sun", workouts: 0, calories: 300, steps: 4600, scans: 2, progress: 0.45 },
+// level definitions 
+// each level has a name and the minimum XP needed to reach it
+const LEVELS = [
+  { name: "Rookie",     minXp: 0 },
+  { name: "Consistent", minXp: 200 },
+  { name: "Pro",        minXp: 1500 },
+  { name: "Legend",     minXp: 6000 },
 ];
+
+// day abbreviations indexed by getDay() (0 = Sunday)
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 
 export default function HomeDashboard() {
   const { user, signOut } = useAuth();
+  const username = user?.name || "guest";
   const router = useRouter();
-
-  const [groupTotalSteps, setGroupTotalSteps] = useState(0);
+  const { streak, refreshStreak } = useStreak(username);
+  // State 
+  const [weeklyData, setWeeklyData]             = useState([]);   // Array of 7 days of stats
+  const [tdee, setTdee]                         = useState(2000); // User's daily calorie target
+  const [liveSteps, setLiveSteps]               = useState(0);    // Real-time step count from pedometer
+  const [groupTotalSteps, setGroupTotalSteps]   = useState(0);    // Group challenge running total
   const [groupLastUpdated, setGroupLastUpdated] = useState("--");
-  const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(6);    // 6 = today (last in the 7-day array)
+  const [xp, setXp]                             = useState(0);    // User's total XP points
 
-  const selectedDay = weeklyDemoData[selectedDayIndex];
+  // convenience: the currently selected day's data object
+  const selectedDay = weeklyData[selectedDayIndex] || {};
 
+  // today's date as a readable string for the header
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 
-  const streakAnim = useRef(new Animated.Value(0)).current;
+  // Animation refs 
+  const streakAnim       = useRef(new Animated.Value(0)).current; // Drives the rotating streak icon
+  const animatedBars     = useRef<Animated.Value[]>([]);          // One value per bar in the week chart
+  const animatedProgress = useRef(new Animated.Value(0)).current; // Drives the calorie ring fill
 
+  // 1. STREAK ICON — loops a 360° rotation forever
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(streakAnim, {
           toValue: 1,
-          duration: 900,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(streakAnim, {
           toValue: 0,
-          duration: 900,
+          duration: 800,
           useNativeDriver: true,
         }),
       ])
     ).start();
   }, []);
 
+  // 2. PEDOMETER — listens for live step count while screen is mounted
+  useEffect(() => {
+    let sub;
+
+    const startPedometer = async () => {
+      const available = await Pedometer.isAvailableAsync();
+      if (!available) return;
+
+      sub = Pedometer.watchStepCount((res) => {
+        setLiveSteps(res.steps);
+      });
+    };
+
+    startPedometer();
+    return () => sub && sub.remove(); // clean up listener on unmount
+  }, []);
+
+  // 3. SAVE STEPS — whenever liveSteps changes, persist today's count to AsyncStorage
+  useEffect(() => {
+    const saveSteps = async () => {
+      if (!user?.name) return;
+
+      const todayKey = new Date().toISOString().split("T")[0]; // e.g. "2025-05-01"
+
+      const existing = await AsyncStorage.getItem(`steps_${username}`);
+      const parsed   = existing ? JSON.parse(existing) : {};
+
+      parsed[todayKey] = liveSteps;
+
+      await AsyncStorage.setItem(`steps_${username}`, JSON.stringify(parsed));
+    };
+
+    saveSteps();
+  }, [liveSteps]);
+
+  // 4. GROUP CHALLENGE — load banner data on mount, then refresh every 5 minutes
   useEffect(() => {
     loadGroupChallengeBannerData();
-
-    const interval = setInterval(() => {
-      loadGroupChallengeBannerData();
-    }, 5 * 60 * 1000);
-
+    const interval = setInterval(loadGroupChallengeBannerData, 300_000);
     return () => clearInterval(interval);
   }, []);
 
+  // 5. CALORIE RING ANIMATION — smoothly animates the ring when progress changes
+  const todayCalories = selectedDay.calories || 0;
+  const progress = tdee > 0 ? Math.min(todayCalories / tdee, 1) : 0;
+
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  // 6. BAR CHART ANIMATION — springs each bar to its height when weeklyData loads
+  useEffect(() => {
+    //create one Animated.Value per day, all starting at 0
+    animatedBars.current = weeklyData.map(() => new Animated.Value(0));
+
+    Animated.parallel(
+      weeklyData.map((item, i) =>
+        Animated.spring(animatedBars.current[i], {
+          toValue: item.progress,
+          friction: 6,
+          tension: 80,
+          useNativeDriver: false,
+        })
+      )
+    ).start();
+  }, [weeklyData]);
+
+  // DATA LOADERS
+  // load the user's XP total from storage
+  const loadXP = async () => {
+    try {
+      const storedXp = await AsyncStorage.getItem("challenge_current_xp");
+      if (storedXp) setXp(Number(storedXp));
+    } catch (e) {
+      console.log("XP load error", e);
+    }
+  };
+
+  // load the group challenge step total and last-updated timestamp
   const loadGroupChallengeBannerData = async () => {
     try {
       const [storedTotal, storedLastUpdated] = await Promise.all([
@@ -89,20 +182,106 @@ export default function HomeDashboard() {
         AsyncStorage.getItem(GROUP_LAST_UPDATED_KEY),
       ]);
 
-      if (storedTotal) setGroupTotalSteps(Number(storedTotal));
+      if (storedTotal)       setGroupTotalSteps(Number(storedTotal));
       if (storedLastUpdated) setGroupLastUpdated(storedLastUpdated);
-    } catch (error) {
-      console.log("Error loading group challenge banner:", error);
+    } catch {}
+  };
+
+  // build the 7-day stats array from AsyncStorage logs
+  const loadWeeklyData = async () => {
+    try {
+      const [logs, targets, stepsData, workoutsData] = await Promise.all([
+        AsyncStorage.getItem(`dailyLogs_${username}`),
+        AsyncStorage.getItem("calorieTargets"),
+        AsyncStorage.getItem(`steps_${username}`),
+        AsyncStorage.getItem("workouts_user"),
+      ]);
+
+      // also check for a backend-cached group total 
+      const groupData = await AsyncStorage.getItem(
+        "group_challenge_total_steps_backend_cache"
+      );
+      if (groupData) setGroupTotalSteps(Number(groupData));
+
+      const parsedLogs     = logs         ? JSON.parse(logs)         : {};
+      const parsedTargets  = targets      ? JSON.parse(targets)       : {};
+      const parsedSteps    = stepsData    ? JSON.parse(stepsData)     : {};
+      const parsedWorkouts = workoutsData ? JSON.parse(workoutsData)  : {};
+
+      const tdeeVal = parsedTargets?.tdee || 0;
+      setTdee(tdeeVal);
+
+      // build one entry for each of the last 7 days (index 0 = 6 days ago, index 6 = today)
+      const days = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const d   = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+        const dayLog   = parsedLogs[key] || [];
+        const calories = dayLog.reduce(
+          (sum, item) => sum + (Number(item.calories) || 0),
+          0
+        );
+
+        days.push({
+          day:      DAY_LABELS[d.getDay()],
+          calories,
+          scans:    dayLog.length,
+          steps:    parsedSteps[key]    || 0,
+          workouts: parsedWorkouts[key] || 0,
+          // progress is 0–1, clamped — used to set the bar height in the chart
+          progress:
+            tdeeVal > 0
+              ? Math.min(Math.max(calories / tdeeVal, 0), 1)
+              : 0,
+        });
+      }
+
+      setWeeklyData(days);
+    } catch (e) {
+      console.log(e);
     }
   };
 
-  const groupProgressPercent = Math.min(
-    groupTotalSteps / GROUP_CHALLENGE_GOAL,
-    1
+  // reload data every time the screen comes into focus (e.g. returning from another tab)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.name) {
+        loadWeeklyData();
+        loadXP();
+        refreshStreak();
+      }
+    }, [user])
   );
 
+  // XP LEVEL CALCULATION
+  //figures out which level the user is at and how far to the next one
+  const levelIndex = LEVELS.findIndex((level, i) => {
+    const next = LEVELS[i + 1];
+    if (!next) return xp >= level.minXp;       // already at max level
+    return xp >= level.minXp && xp < next.minXp;
+  });
+
+  const safeIndex    = levelIndex === -1 ? 0 : levelIndex;
+  const currentLevel = LEVELS[safeIndex];
+  const nextLevel    = LEVELS[safeIndex + 1] || currentLevel; // falls back to current at max level
+
+  // 0–1 fraction of progress toward the next level
+  const xpProgress =
+    currentLevel.name === "Legend"
+      ? 1
+      : (xp - currentLevel.minXp) / (nextLevel.minXp - currentLevel.minXp || 1);
+
+  // how far along the shared 100k-step group challenge is (0–1)
+  const groupProgressPercent = Math.min(groupTotalSteps / GROUP_CHALLENGE_GOAL, 1);
+
+  // RENDER
   return (
     <SafeAreaView style={styles.safe}>
+
+      {/*  Header gradient with greeting, avatar, and streak pill  */}
       <LinearGradient
         colors={[colors.primaryDark, colors.primary]}
         style={styles.headerGradient}
@@ -118,12 +297,8 @@ export default function HomeDashboard() {
               source={require("../../assets/panda-stretch.png")}
               style={styles.avatar}
             />
-
             <Pressable
-              onPress={() => {
-                signOut();
-                router.replace("/login");
-              }}
+              onPress={() => { signOut(); router.replace("/login"); }}
               style={styles.signOutBtn}
             >
               <Text style={styles.signOutTxt}>Sign Out</Text>
@@ -131,6 +306,7 @@ export default function HomeDashboard() {
           </View>
         </View>
 
+        {/* Streak pill (rotates) + today's workout count */}
         <View style={styles.streakRow}>
           <Animated.View
             style={[
@@ -138,222 +314,241 @@ export default function HomeDashboard() {
               {
                 transform: [
                   {
-                    rotate: streakAnim.interpolate({
+                    scale: streakAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ["0deg", "360deg"],
+                      outputRange: [1, 1.1],
                     }),
                   },
                 ],
               },
             ]}
           >
-            <Text style={styles.streakLabel}>day streak</Text>
+            <Text style={styles.streakLabel}>
+  🔥 {streak > 0 ? `${streak} day streak` : "Start your streak"}
+</Text>
           </Animated.View>
 
           <View style={styles.smallStats}>
-            <Text style={styles.smallValue}>+3</Text>
+            <Text style={styles.smallValue}>{selectedDay.workouts || 0}</Text>
             <Text style={styles.smallLabel}>workouts</Text>
           </View>
         </View>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+
+        {/*  progress rings: Calories · Scans · Steps  */}
         <View style={styles.ringsRow}>
-          <ProgressRing size={92} progress={0.45} label="Daily" sub="45%" />
-          <ProgressRing size={92} progress={0.6} label="Goal" sub="60%" />
-          <ProgressRing size={92} progress={0.3} label="Move" sub="30%" />
+          <ProgressRing
+            size={92}
+            progress={animatedProgress}
+            label="Calories"
+            sub={`${selectedDay.calories || 0} cal`}
+          />
+          <ProgressRing
+            size={92}
+            progress={Math.min((selectedDay.scans || 0) / 3, 1)}
+            label="Scans"
+            sub={`${selectedDay.scans || 0}`}
+          />
+          <ProgressRing
+            size={92}
+            progress={Math.min((selectedDay.steps || 0) / 10000, 1)}
+            label="Steps"
+            sub={`${selectedDay.steps || 0}`}
+            onPress={() => router.push("/group_challenges")}
+          />
         </View>
 
+        {/* XP level progress bar */}
+        <View style={styles.xpCard}>
+          <Text style={styles.xpTitle}>{`${currentLevel.name} • ${xp} XP`}</Text>
+          <View style={styles.xpBar}>
+            <View style={[styles.xpFill, { width: `${Math.min(xpProgress * 100, 100)}%` }]} />
+          </View>
+          <Text style={styles.xpSub}>
+            {currentLevel.name === "Legend"
+              ? "Max level reached"
+              : `${nextLevel.minXp - xp} XP to ${nextLevel.name}`}
+          </Text>
+        </View>
+
+        {/*  daily challenge cards (horizontal scroll)  */}
         <View style={styles.challengeSection}>
-          <Text style={styles.sectionTitle}>Challenges</Text>
+          <Text style={styles.sectionTitle}>Daily Challenges</Text>
 
           <ScrollView
             horizontal
-            pagingEnabled
             showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            snapToInterval={BANNER_WIDTH + 12}
             contentContainerStyle={styles.bannerScrollContent}
           >
+            {/* challenge 1: 10K Steps */}
             <Pressable
-              style={[styles.challengeCard, { width: BANNER_WIDTH }]}
-              onPress={() => router.push("/challenges")}
+              style={styles.challengeCard}
+              onPress={() => router.push("/group_challenges")}
             >
               <View style={styles.bannerTextWrap}>
-                <Text style={styles.challengeCardTitle}>Daily Challenges</Text>
-                <Text style={styles.challengeCardSubtitle}>
-                  Complete today’s challenges and earn XP!
-                </Text>
-
-                <View style={styles.bannerBadge}>
-                  <Text style={styles.bannerBadgeText}>Personal</Text>
-                </View>
-              </View>
-
-              <Text style={styles.challengeCardArrow}>›</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.challengeCard,
-                styles.groupCard,
-                { width: BANNER_WIDTH },
-              ]}
-              onPress={() => router.push("/group-challenge")}
-            >
-              <View style={styles.bannerTextWrap}>
-                <Text style={styles.challengeCardTitle}>Group Challenge</Text>
-                <Text style={styles.challengeCardSubtitle}>
-                  Join the 100,000 step community challenge and contribute your
-                  steps.
-                </Text>
-
-                <View style={styles.groupProgressRow}>
-                  <Text style={styles.groupProgressText}>
-                    {groupTotalSteps.toLocaleString()} /{" "}
-                    {GROUP_CHALLENGE_GOAL.toLocaleString()} steps
-                  </Text>
-                  <Text style={styles.groupProgressPercent}>
-                    {Math.round(groupProgressPercent * 100)}%
-                  </Text>
-                </View>
-
+                <Text style={styles.challengeCardTitle}>10K Steps</Text>
+                <Text style={styles.challengeCardSubtitle}>Walk 10,000 steps today</Text>
                 <View style={styles.progressBarTrack}>
                   <View
                     style={[
                       styles.progressBarFill,
-                      { width: `${groupProgressPercent * 100}%` },
+                      { width: `${Math.min((selectedDay.steps || 0) / 10000 * 100, 100)}%` },
                     ]}
                   />
                 </View>
-
-                <Text style={styles.groupUpdatedText}>
-                  Updates every 5 min • Last: {groupLastUpdated}
-                </Text>
-
-                <View style={styles.bannerBadge}>
-                  <Text style={styles.bannerBadgeText}>Community</Text>
-                </View>
+                <Text style={styles.bannerBadgeText}>{selectedDay.steps || 0} / 10,000</Text>
               </View>
+            </Pressable>
 
-              <Text style={styles.challengeCardArrow}>›</Text>
+            {/* challenge 2: Calorie Goal */}
+            <Pressable
+              style={styles.challengeCard}
+              onPress={() => router.push("/(tabs)/calories")}
+            >
+              <View style={styles.bannerTextWrap}>
+                <Text style={styles.challengeCardTitle}>Calorie Goal</Text>
+                <Text style={styles.challengeCardSubtitle}>Stay within your target</Text>
+                <View style={styles.progressBarTrack}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${Math.min(
+                          tdee > 0 ? (selectedDay.calories || 0) / tdee * 100 : 0,
+                          100
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.bannerBadgeText}>
+                  {selectedDay.calories || 0} / {tdee}
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* challenge 3: Food Logging */}
+            <Pressable
+              style={styles.challengeCard}
+              onPress={() => router.push("/(tabs)/calories")}
+            >
+              <View style={styles.bannerTextWrap}>
+                <Text style={styles.challengeCardTitle}>Food Logging</Text>
+                <Text style={styles.challengeCardSubtitle}>Log at least 3 meals</Text>
+                <View style={styles.progressBarTrack}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${Math.min(((selectedDay.scans || 0) / 3) * 100, 100)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.bannerBadgeText}>{selectedDay.scans || 0} / 3 meals</Text>
+              </View>
             </Pressable>
           </ScrollView>
         </View>
 
+        {/*  weekly bar chart — tap a bar to select that day  */}
         <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.cardTitle}>This Week</Text>
-            <Text style={styles.chartHint}>Tap a day</Text>
-          </View>
+          <Text style={styles.cardTitle}>This Week</Text>
 
           <View style={styles.weekChart}>
-            {weeklyDemoData.map((item, index) => (
+            {weeklyData.map((item, index) => (
               <Pressable
-                key={item.day}
+                key={index}
                 style={styles.dayBarWrap}
                 onPress={() => setSelectedDayIndex(index)}
               >
                 <View style={styles.barTrack}>
-                  <View
+                  <Animated.View
                     style={[
                       styles.dayBar,
                       {
-                        height: `${item.progress * 100}%`,
+                        height: animatedBars.current[index]
+                          ? animatedBars.current[index].interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ["0%", "100%"],
+                            })
+                          : "0%",
                       },
-                      selectedDayIndex === index && styles.dayBarActive,
+                      selectedDayIndex === index && {
+                        backgroundColor: "#42564F",
+                        shadowColor: "#000",
+                        shadowOpacity: 0.2,
+                        shadowRadius: 6,
+                        elevation: 4,
+                        transform: [{ scale: 1.1 }], // 🔥 makes it grow
+                      },
                     ]}
                   />
                 </View>
-
-                <Text
-                  style={[
-                    styles.dayLabel,
-                    selectedDayIndex === index && styles.dayLabelActive,
-                  ]}
-                >
-                  {item.day}
-                </Text>
+                <Text style={styles.dayLabel}>{item.day}</Text>
               </Pressable>
             ))}
           </View>
+        </View>
 
-          <View style={styles.dayStatsCard}>
-            <Text style={styles.dayStatsTitle}>{selectedDay.day}'s Stats</Text>
+        {/*  stat grid for the selected day  */}
+        <View style={styles.dayStatsCard}>
+          <Text style={styles.dayStatsTitle}>{selectedDay.day || "Today"}'s Stats</Text>
 
-            <View style={styles.dayStatsGrid}>
-              <View style={styles.dayStatBox}>
-                <Text style={styles.dayStatValue}>{selectedDay.workouts}</Text>
-                <Text style={styles.dayStatLabel}>Workouts</Text>
-              </View>
-
-              <View style={styles.dayStatBox}>
-                <Text style={styles.dayStatValue}>
-                  {selectedDay.calories}
-                </Text>
-                <Text style={styles.dayStatLabel}>Calories</Text>
-              </View>
-
-              <View style={styles.dayStatBox}>
-                <Text style={styles.dayStatValue}>
-                  {selectedDay.steps.toLocaleString()}
-                </Text>
-                <Text style={styles.dayStatLabel}>Steps</Text>
-              </View>
-
-              <View style={styles.dayStatBox}>
-                <Text style={styles.dayStatValue}>{selectedDay.scans}</Text>
-                <Text style={styles.dayStatLabel}>Food Scans</Text>
-              </View>
+          <View style={styles.dayStatsGrid}>
+            <View style={styles.dayStatBox}>
+              <Text style={styles.dayStatValue}>{selectedDay.calories || 0}</Text>
+              <Text style={styles.dayStatLabel}>Calories</Text>
+            </View>
+            <View style={styles.dayStatBox}>
+              <Text style={styles.dayStatValue}>{selectedDay.scans || 0}</Text>
+              <Text style={styles.dayStatLabel}>Food Scans</Text>
+            </View>
+            <View style={styles.dayStatBox}>
+              <Text style={styles.dayStatValue}>{selectedDay.steps || 0}</Text>
+              <Text style={styles.dayStatLabel}>Steps</Text>
+            </View>
+            <View style={styles.dayStatBox}>
+              <Text style={styles.dayStatValue}>{selectedDay.workouts || 0}</Text>
+              <Text style={styles.dayStatLabel}>Workouts</Text>
             </View>
           </View>
         </View>
 
+        {/*  Quick-access buttons to main tabs  */}
         <View style={styles.toolsCard}>
           <Text style={styles.cardTitle}>Quick Access</Text>
 
           <View style={styles.toolsGrid}>
-            <Pressable
-              style={styles.toolBtn}
-              onPress={() => router.push("/(tabs)/workout")}
-            >
-              <Ionicons name="barbell-outline" size={22} color="#42564F" />
-              <Text style={styles.toolText}>Start Workout</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.toolBtn}
-              onPress={() => router.push("/calories")}
-            >
+            <Pressable style={styles.toolBtn} onPress={() => router.push("/(tabs)/calories")}>
               <Ionicons name="barcode-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Calories</Text>
             </Pressable>
 
-            <Pressable
-              style={styles.toolBtn}
-              onPress={() => router.push("/challenges")}
-            >
+            <Pressable style={styles.toolBtn} onPress={() => router.push("/(tabs)/workout")}>
+              <Ionicons name="barbell-outline" size={22} color="#42564F" />
+              <Text style={styles.toolText}>Workout</Text>
+            </Pressable>
+
+            <Pressable style={styles.toolBtn} onPress={() => router.push("/group_challenges")}>
+              <Ionicons name="walk-outline" size={22} color="#42564F" />
+              <Text style={styles.toolText}>Steps</Text>
+            </Pressable>
+
+            <Pressable style={styles.toolBtn} onPress={() => router.push("/challenges")}>
               <Ionicons name="trophy-outline" size={22} color="#42564F" />
               <Text style={styles.toolText}>Challenges</Text>
             </Pressable>
-
-            <Pressable
-              style={styles.toolBtn}
-              onPress={() => router.push("/group-challenge")}
-            >
-              <Ionicons name="people-outline" size={22} color="#42564F" />
-              <Text style={styles.toolText}>Group Challenge</Text>
-            </Pressable>
           </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+
+// STYLES
 
 const styles = StyleSheet.create({
   safe: {
@@ -361,6 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
+  // green gradient header at the top
   headerGradient: {
     paddingHorizontal: 20,
     paddingTop: 18,
@@ -439,10 +635,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  content: {
-    flex: 1,
-  },
-
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
@@ -453,6 +645,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
+  //  Challenge cards 
   challengeSection: {
     marginTop: 18,
   },
@@ -478,10 +671,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  groupCard: {
-    backgroundColor: "#DDECC8",
-  },
-
   bannerTextWrap: {
     flex: 1,
     paddingRight: 12,
@@ -500,43 +689,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  challengeCardArrow: {
-    fontSize: 26,
-    fontWeight: "400",
-    color: "#2F4F3E",
-  },
-
-  bannerBadge: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    backgroundColor: "rgba(47,79,62,0.12)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-
   bannerBadgeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#2F4F3E",
-  },
-
-  groupProgressRow: {
-    marginTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  groupProgressText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#2F4F3E",
-  },
-
-  groupProgressPercent: {
-    fontSize: 13,
-    fontWeight: "800",
     color: "#2F4F3E",
   },
 
@@ -554,12 +709,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#6B8A82",
   },
 
-  groupUpdatedText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#4B6354",
-  },
-
+  //  Weekly bar chart 
   chartCard: {
     marginTop: 18,
     padding: 14,
@@ -568,18 +718,6 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.06,
     elevation: 3,
-  },
-
-  chartHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  chartHint: {
-    color: "#6B7280",
-    fontSize: 12,
-    fontWeight: "600",
   },
 
   cardTitle: {
@@ -617,7 +755,7 @@ const styles = StyleSheet.create({
   },
 
   dayBarActive: {
-    backgroundColor: "#42564F",
+    backgroundColor: "#42564F", // darker green for the selected day's bar
   },
 
   dayLabel: {
@@ -627,10 +765,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  dayLabelActive: {
-    color: "#2F4F3E",
-  },
-
+  //  Selected day stat grid ─
   dayStatsCard: {
     marginTop: 16,
     backgroundColor: "#F7F6E7",
@@ -673,6 +808,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  //  quick access buttons 
   toolsCard: {
     marginTop: 14,
     padding: 14,
@@ -701,5 +837,37 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#2F4F3E",
     textAlign: "center",
+  },
+
+  //  XP level bar 
+  xpCard: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    marginTop: 14,
+  },
+
+  xpTitle: {
+    fontWeight: "800",
+    color: "#2F4F3E",
+    marginBottom: 6,
+  },
+
+  xpBar: {
+    height: 8,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+
+  xpFill: {
+    height: "100%",
+    backgroundColor: "#6B8A82",
+  },
+
+  xpSub: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#6B7280",
   },
 });

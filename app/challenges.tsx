@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../components/AuthContext";
 
-const API_BASE_URL = "http://192.168.24.11:8080/api";
+const API_BASE_URL = "http://:8080/api";
 
 const STORAGE_KEYS = {
   xp: "challenge_current_xp",

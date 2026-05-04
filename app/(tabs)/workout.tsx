@@ -10,8 +10,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import colors from "../../constants/colors";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+//  types 
 
 type MuscleGroup = "All" | "Chest" | "Legs" | "Core" | "Arms";
+
+//  static data 
 
 const muscleGroups: MuscleGroup[] = ["All", "Chest", "Legs", "Core", "Arms"];
 
@@ -51,19 +56,29 @@ const workouts = [
   },
 ];
 
+//component 
 export default function Workout() {
+  // currently selected muscle group filter
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup>("All");
+
+  // currently selected workout from the list
   const [selectedWorkout, setSelectedWorkout] = useState(workouts[0]);
+
+  // timer state
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
+  // animated value used for the pulsing timer text
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // filter workout list based on selected muscle group
   const filteredWorkouts =
     selectedGroup === "All"
       ? workouts
       : workouts.filter((workout) => workout.group === selectedGroup);
 
+  //  timer interval 
+  // increments seconds every 1000ms while the timer is running
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -78,6 +93,8 @@ export default function Workout() {
     };
   }, [isRunning]);
 
+  //  pulse animation 
+  // loops a subtle scale bounce on the timer text while running
   useEffect(() => {
     let animation: Animated.CompositeAnimation | null = null;
 
@@ -99,6 +116,7 @@ export default function Workout() {
 
       animation.start();
     } else {
+      // snap back to normal scale when paused or stopped
       pulseAnim.stopAnimation();
       Animated.timing(pulseAnim, {
         toValue: 1,
@@ -112,19 +130,37 @@ export default function Workout() {
     };
   }, [isRunning, pulseAnim]);
 
+  //  helpers 
+
+  // converts raw seconds into mm:ss display format
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-
-    return `${mins < 10 ? `0${mins}` : mins}:${
-      secs < 10 ? `0${secs}` : secs
-    }`;
+    return `${mins < 10 ? `0${mins}` : mins}:${secs < 10 ? `0${secs}` : secs}`;
   };
 
-  const startSelectedWorkout = () => {
+  // resets the timer and logs the workout start to async storage
+  const startSelectedWorkout = async () => {
     setSeconds(0);
     setIsRunning(true);
+
+    // persist a workout count keyed by today's date
+    const today = new Date().toISOString().split("T")[0];
+    const key = `workouts_user`;
+
+    try {
+      const existing = await AsyncStorage.getItem(key);
+      const parsed = existing ? JSON.parse(existing) : {};
+
+      parsed[today] = (parsed[today] || 0) + 1;
+
+      await AsyncStorage.setItem(key, JSON.stringify(parsed));
+    } catch (e) {
+      console.log("workout save error", e);
+    }
   };
+
+  //  render 
 
   return (
     <SafeAreaView
@@ -132,6 +168,8 @@ export default function Workout() {
       edges={["top"]}
     >
       <View style={styles.container}>
+
+        {/* page header */}
         <View style={styles.headerBlock}>
           <Text style={[styles.title, { color: colors.text }]}>Workout</Text>
           <Text style={[styles.subtitle, { color: colors.text }]}>
@@ -140,11 +178,14 @@ export default function Workout() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
+
+          {/*  timer card  */}
           <View style={[styles.timerCard, { backgroundColor: colors.cardBg }]}>
             <Text style={[styles.timerLabel, { color: colors.primaryDark }]}>
               {selectedWorkout.name} Timer
             </Text>
 
+            {/* animated timer display */}
             <Animated.Text
               style={[
                 styles.timerText,
@@ -157,12 +198,10 @@ export default function Workout() {
               {formatTime(seconds)}
             </Animated.Text>
 
+            {/* start / pause and reset controls */}
             <View style={styles.timerButtonRow}>
               <TouchableOpacity
-                style={[
-                  styles.timerButton,
-                  { backgroundColor: colors.primaryDark },
-                ]}
+                style={[styles.timerButton, { backgroundColor: colors.primaryDark }]}
                 onPress={() => setIsRunning((prev) => !prev)}
                 activeOpacity={0.85}
               >
@@ -189,6 +228,7 @@ export default function Workout() {
             </View>
           </View>
 
+          {/*  muscle group filter chips  */}
           <Text style={[styles.sectionLabel, { color: colors.text }]}>
             Target Muscle
           </Text>
@@ -215,6 +255,7 @@ export default function Workout() {
                   onPress={() => {
                     setSelectedGroup(group);
 
+                    // auto-select the first workout in the chosen group
                     const firstMatch =
                       group === "All"
                         ? workouts[0]
@@ -236,6 +277,7 @@ export default function Workout() {
             })}
           </ScrollView>
 
+          {/*  workout list  */}
           <View style={styles.listContainer}>
             {filteredWorkouts.map((workout) => {
               const isSelected = selectedWorkout.id === workout.id;
@@ -264,6 +306,7 @@ export default function Workout() {
                       {workout.name}
                     </Text>
 
+                    {/* difficulty badge */}
                     <Text
                       style={[
                         styles.badge,
@@ -299,6 +342,7 @@ export default function Workout() {
             })}
           </View>
 
+          {/*  selected workout detail card  */}
           <View style={[styles.card, { backgroundColor: colors.cardBg }]}>
             <Text style={[styles.cardTitle, { color: colors.primaryDark }]}>
               {selectedWorkout.name}
@@ -308,6 +352,7 @@ export default function Workout() {
               Target: {selectedWorkout.target}
             </Text>
 
+            {/* difficulty, equipment, and set info pills */}
             <View style={styles.detailRow}>
               <View style={styles.detailPill}>
                 <Text style={styles.detailText}>{selectedWorkout.difficulty}</Text>
@@ -320,6 +365,7 @@ export default function Workout() {
               </View>
             </View>
 
+            {/* animated gif demo */}
             <View style={styles.demoWrap}>
               <Image
                 source={selectedWorkout.demo}
@@ -328,6 +374,7 @@ export default function Workout() {
               />
             </View>
 
+            {/* starts the timer and logs the workout */}
             <TouchableOpacity
               style={[styles.startWorkoutBtn, { backgroundColor: colors.primaryDark }]}
               onPress={startSelectedWorkout}
@@ -338,6 +385,7 @@ export default function Workout() {
               </Text>
             </TouchableOpacity>
 
+            {/* form tip for the selected workout */}
             <View style={styles.tipBlock}>
               <Text style={[styles.tipLabel, { color: colors.primaryDark }]}>
                 Quick Tip
@@ -347,11 +395,14 @@ export default function Workout() {
               </Text>
             </View>
           </View>
+
         </ScrollView>
       </View>
     </SafeAreaView>
   );
 }
+
+//  styles 
 
 const styles = StyleSheet.create({
   container: {
